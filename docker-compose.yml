@@ -1,0 +1,91 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: cartonpak-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: parsiancartoncom_db
+      MYSQL_USER: cartonpak
+      MYSQL_PASSWORD: cartonpak123
+      MYSQL_ROOT_PASSWORD: rootpass123
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: cartonpak-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wordpress:
+    build:
+      context: .
+      dockerfile: setup/wordpress.Dockerfile
+    container_name: cartonpak-wp
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: parsiancartoncom_db
+      WORDPRESS_DB_USER: cartonpak
+      WORDPRESS_DB_PASSWORD: cartonpak123
+      WORDPRESS_DEBUG: "1"
+      WORDPRESS_CONFIG_EXTRA: "define( 'WP_REDIS_HOST', 'redis' );"
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./setup:/setup:ro
+
+  wpcli:
+    build:
+      context: .
+      dockerfile: setup/wpcli.Dockerfile
+    container_name: cartonpak-cli
+    depends_on:
+      db:
+        condition: service_healthy
+      wordpress:
+        condition: service_started
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: parsiancartoncom_db
+      WORDPRESS_DB_USER: cartonpak
+      WORDPRESS_DB_PASSWORD: cartonpak123
+      WORDPRESS_DEBUG: "1"
+      WORDPRESS_CONFIG_EXTRA: "define( 'WP_REDIS_HOST', 'redis' );"
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./setup:/setup:ro
+    profiles:
+      - cli
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cartonpak-pma
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpass123
+    profiles:
+      - tools
