@@ -8,6 +8,7 @@ require __DIR__ . '/wp-stubs.php';
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
 require $base . 'class-pcs-spreadsheet.php';
 require $base . 'class-pcs-mapper.php';
+require $base . 'class-pcs-media.php';
 require $base . 'class-pcs-settings.php';
 require $base . 'class-pcs-sync.php';
 
@@ -130,7 +131,9 @@ check( 'PC-01 — شناسهٔ محصول', $rows['PC-01']['product_id'], 101 );
 // PC-02: محصول تازه.
 check( 'PC-02 — عملیات', $rows['PC-02']['action'], 'create' );
 check( 'PC-02 — شناسهٔ محصول صفر', $rows['PC-02']['product_id'], 0 );
-check( 'PC-02 — ویژگی سایز', $rows['PC-02']['attributes']['سایز'], array( 'سایز ۲' ) );
+// صفت‌ها به‌صورت پیش‌فرض وارد نمی‌شوند؛ روی محصول متغیر، بازنویسی صفت‌ها
+// پیوند واریاسیون‌ها را می‌شکند، پس این کار باید آگاهانه روشن شود.
+check( 'PC-02 — صفت‌ها به‌صورت پیش‌فرض نادیده گرفته می‌شوند', $rows['PC-02']['attributes'], array() );
 
 // PC-03: همان مقادیر فعلی → بدون تغییر (ایدم‌پوتنت بودن).
 check( 'PC-03 — بدون تغییر', $rows['PC-03']['action'], 'unchanged' );
@@ -139,6 +142,22 @@ check( 'PC-03 — بدون تفاوت', $rows['PC-03']['changes'], array() );
 // سطر بدون کد محصول → خطا.
 $error_rows = array_values( array_filter( $plan['rows'], static function ( $row ) { return 'error' === $row['action']; } ) );
 check( 'سطر بدون کد — خطا دارد', count( $error_rows[0]['errors'] ) > 0, true );
+
+/* ---------- صفت‌ها با روشن بودن تنظیم ---------- */
+
+$GLOBALS['pcs_options']['pcs_settings'] = array( 'import_attributes' => 1 );
+PCS_Settings::instance()->flush();
+
+$with_attrs = PCS_Sync::plan( __DIR__ . '/fixtures-plan.csv' );
+$attr_rows  = array();
+foreach ( $with_attrs['rows'] as $row ) {
+	$attr_rows[ $row['sku'] ] = $row;
+}
+
+check( 'با روشن بودن تنظیم، صفت خوانده می‌شود', $attr_rows['PC-02']['attributes']['سایز'], array( 'سایز ۲' ) );
+
+$GLOBALS['pcs_options']['pcs_settings'] = array();
+PCS_Settings::instance()->flush();
 
 // محصول غایب از فایل.
 check( 'غایب — تعداد', count( $plan['missing'] ), 1 );

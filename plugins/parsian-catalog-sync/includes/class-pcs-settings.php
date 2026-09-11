@@ -62,6 +62,7 @@ class PCS_Settings {
 			'price_unit'        => 'toman',
 			'missing_action'    => 'draft',
 			'create_attributes' => 1,
+			'import_attributes' => 0,
 			'source'            => '',
 			'sheet'             => '',
 			'schedule'          => 'off',
@@ -82,6 +83,13 @@ class PCS_Settings {
 		}
 
 		return array_key_exists( $key, $this->cache ) ? $this->cache[ $key ] : $default;
+	}
+
+	/**
+	 * دور ریختن کش گزینه‌ها — پس از تغییر مستقیم گزینه‌ها در دیتابیس لازم است.
+	 */
+	public function flush() {
+		$this->cache = null;
 	}
 
 	/**
@@ -108,6 +116,7 @@ class PCS_Settings {
 		}
 
 		$clean['create_attributes'] = empty( $values['create_attributes'] ) ? 0 : 1;
+		$clean['import_attributes'] = empty( $values['import_attributes'] ) ? 0 : 1;
 
 		if ( isset( $values['source'] ) ) {
 			$clean['source'] = self::sanitize_source( $values['source'] );

@@ -9,6 +9,7 @@ require __DIR__ . '/wp-stubs.php';
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
 require $base . 'class-pcs-spreadsheet.php';
 require $base . 'class-pcs-mapper.php';
+require $base . 'class-pcs-media.php';
 require $base . 'class-pcs-settings.php';
 require $base . 'class-pcs-sync.php';
 
@@ -68,11 +69,20 @@ check( 'قالب — نام سطر اول', $first['name'], 'کارتن پستی
 check( 'قالب — قیمت سطر اول', $first['values']['regular_price'], '8500' );
 check( 'قالب — دستهٔ سطر اول', $first['values']['categories'], array( 'کارتن پستی' ) );
 check( 'قالب — دستهٔ سلسله‌مراتبی سطر سوم', $plan['rows'][2]['values']['categories'], array( 'کارتن اسباب‌کشی>۵ لایه' ) );
-check( 'قالب — ویژگی سطر سوم', $plan['rows'][2]['attributes']['تعداد لایه'], array( '۵ لایه' ) );
+// صفت‌ها پیش‌فرض خاموش‌اند (پایین با روشن کردن تنظیم بررسی می‌شود).
+check( 'قالب — صفت‌ها پیش‌فرض نادیده گرفته می‌شوند', $plan['rows'][2]['attributes'], array() );
 check( 'قالب — وضعیت موجودی سطر اول', $first['values']['stock_status'], 'instock' );
 check( 'قالب — وضعیت انتشار سطر اول', $first['values']['status'], 'publish' );
 check( 'قالب — موجودی سطر اول', $first['values']['stock_quantity'], 120 );
 check( 'قالب — وزن سطر اول', $first['values']['weight'], '0.12' );
+
+/* ---------- با روشن بودن ورود صفت‌ها ---------- */
+
+$GLOBALS['pcs_options']['pcs_settings'] = array( 'import_attributes' => 1 );
+PCS_Settings::instance()->flush();
+
+$with_attrs = PCS_Sync::plan( $template );
+check( 'قالب — صفت سطر سوم با روشن بودن تنظیم', $with_attrs['rows'][2]['attributes']['تعداد لایه'], array( '۵ لایه' ) );
 
 echo $failures ? "\n{$failures} آزمون شکست خورد.\n" : "\nهمهٔ آزمون‌ها موفق بودند.\n";
 exit( $failures ? 1 : 0 );

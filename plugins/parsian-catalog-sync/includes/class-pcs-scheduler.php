@@ -107,6 +107,33 @@ class PCS_Scheduler {
 					),
 				)
 			);
+		} elseif ( self::too_many_missing( $plan ) ) {
+			// در حالت خودکار پیش‌نمایشی وجود ندارد که جلوی فاجعه را بگیرد. اگر فایل
+			// ناقص باشد (مثلاً برون‌ریزی فیلترشده یا خطای دانلود)، «پیش‌نویس کردن
+			// محصولات غایب» می‌تواند کل فروشگاه را خالی کند.
+			$settings->record_run(
+				array(
+					'created'   => 0,
+					'updated'   => 0,
+					'skipped'   => 0,
+					'failed'    => 0,
+					'missing'   => 0,
+					'timestamp' => current_time( 'mysql' ),
+					'messages'  => array(
+						array(
+							'type' => 'error',
+							'row'  => 0,
+							'sku'  => '',
+							'text' => sprintf(
+								/* translators: 1: تعداد محصولات غایب، 2: تعداد سطرهای فایل. */
+								__( 'همگام‌سازی خودکار متوقف شد: %1$s محصول فروشگاه در فایل نبودند (فایل فقط %2$s سطر داشت). فایل احتمالاً ناقص است. یک بار دستی بارگذاری کنید تا پیش‌نمایش را ببینید.', 'parsian-catalog-sync' ),
+								pcs_digits( count( $plan['missing'] ) ),
+								pcs_digits( count( $plan['rows'] ) )
+							),
+						),
+					),
+				)
+			);
 		} else {
 			PCS_Sync::apply( $plan );
 		}
@@ -115,6 +142,39 @@ class PCS_Scheduler {
 		if ( preg_match( '#^https?://#i', $source ) && file_exists( $path ) ) {
 			wp_delete_file( $path );
 		}
+	}
+
+
+	/**
+	 * آیا شمار محصولات غایب از فایل، مشکوک به ناقص بودن فایل است؟
+	 *
+	 * فقط وقتی معنا دارد که رفتار «محصولات غایب» تخریبی باشد؛ در حالت
+	 * «دست‌نخورده بمانند» چیزی برای محافظت وجود ندارد.
+	 *
+	 * @param array $plan نقشهٔ تغییرات.
+	 * @return bool
+	 */
+	protected static function too_many_missing( $plan ) {
+		if ( 'none' === PCS_Settings::instance()->get( 'missing_action' ) ) {
+			return false;
+		}
+
+		$missing = count( $plan['missing'] );
+
+		if ( $missing < 5 ) {
+			return false;
+		}
+
+		$total = $missing + count( $plan['rows'] );
+
+		/**
+		 * تغییر آستانهٔ توقف همگام‌سازی خودکار.
+		 *
+		 * @param float $ratio نسبت محصولات غایب به کل (پیش‌فرض ۰٫۲ یعنی ۲۰ درصد).
+		 */
+		$ratio = (float) apply_filters( 'pcs_missing_abort_ratio', 0.2 );
+
+		return $total > 0 && ( $missing / $total ) > $ratio;
 	}
 
 	/**

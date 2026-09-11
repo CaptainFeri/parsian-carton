@@ -27,25 +27,31 @@ class PCS_Mapper {
 	 */
 	public static function aliases() {
 		$map = array(
+			// نام دوم هر ردیف، سرستون خروجی CSV خود ووکامرس (فارسی و انگلیسی) است،
+			// تا فایل «محصولات ← همهٔ محصولات ← برون‌ریزی» بدون دست‌کاری قابل ایمپورت باشد.
 			'sku'               => array( 'کد محصول', 'کد کالا', 'شناسه محصول', 'کد', 'sku' ),
 			'name'              => array( 'نام محصول', 'نام', 'عنوان', 'عنوان محصول', 'name', 'title' ),
+			'type'              => array( 'نوع', 'نوع محصول', 'type' ),
+			'parent'            => array( 'مادر', 'والد', 'parent' ),
 			'description'       => array( 'توضیحات', 'توضیح', 'شرح', 'توضیحات کامل', 'description' ),
 			'short_description' => array( 'توضیح کوتاه', 'توضیحات کوتاه', 'خلاصه', 'short description' ),
 			'regular_price'     => array( 'قیمت', 'قیمت اصلی', 'قیمت عادی', 'قیمت فروش', 'price', 'regular price' ),
-			'sale_price'        => array( 'قیمت حراج', 'قیمت تخفیف', 'قیمت ویژه', 'sale price' ),
+			'sale_price'        => array( 'قیمت حراج', 'قیمت تخفیف', 'قیمت ویژه', 'قیمت فروش ویژه', 'sale price' ),
 			'stock_quantity'    => array( 'موجودی', 'تعداد', 'انبار', 'تعداد موجودی', 'stock', 'quantity' ),
-			'stock_status'      => array( 'وضعیت موجودی', 'وضعیت انبار', 'stock status' ),
-			'categories'        => array( 'دسته بندی', 'دسته', 'دسته ها', 'گروه', 'category', 'categories' ),
+			'stock_status'      => array( 'وضعیت موجودی', 'وضعیت انبار', 'در انبار؟', 'در انبار', 'stock status', 'in stock?' ),
+			'categories'        => array( 'دسته بندی', 'دسته', 'دسته ها', 'دسته بندی ها', 'گروه', 'category', 'categories' ),
 			'tags'              => array( 'برچسب', 'برچسب ها', 'تگ', 'tags' ),
 			'image'             => array( 'تصویر', 'عکس', 'تصویر شاخص', 'عکس اصلی', 'image' ),
-			'gallery'           => array( 'گالری', 'تصاویر', 'عکس های بیشتر', 'gallery' ),
+			'gallery'           => array( 'گالری', 'عکس های بیشتر', 'gallery' ),
+			// ووکامرس تصویر شاخص و گالری را در یک ستون می‌دهد: اولی شاخص، بقیه گالری.
+			'images'            => array( 'تصاویر', 'images' ),
 			'weight'            => array( 'وزن', 'weight' ),
-			'length'            => array( 'طول', 'length' ),
-			'width'             => array( 'عرض', 'width' ),
-			'height'            => array( 'ارتفاع', 'height' ),
-			'status'            => array( 'وضعیت', 'وضعیت انتشار', 'status' ),
-			'featured'          => array( 'ویژه', 'محصول ویژه', 'featured' ),
-			'menu_order'        => array( 'ترتیب', 'اولویت', 'order' ),
+			'length'            => array( 'طول', 'درازا', 'length' ),
+			'width'             => array( 'عرض', 'پهنا', 'width' ),
+			'height'            => array( 'ارتفاع', 'بلندا', 'height' ),
+			'status'            => array( 'وضعیت', 'وضعیت انتشار', 'منتشر شده', 'status', 'published' ),
+			'featured'          => array( 'ویژه', 'محصول ویژه', 'آیا ویژه است؟', 'featured', 'is featured?' ),
+			'menu_order'        => array( 'ترتیب', 'اولویت', 'موقعیت', 'order', 'position' ),
 		);
 
 		/**
@@ -74,15 +80,24 @@ class PCS_Mapper {
 		$fields     = array();
 		$attributes = array();
 		$unknown    = array();
+		$wc_attr    = array();
 
 		foreach ( $headers as $header ) {
 			$normalized = PCS_Spreadsheet::normalize_header( $header );
 
+			// قالب خودمان: «ویژگی: سایز»
 			if ( 0 === mb_strpos( $normalized, self::ATTRIBUTE_PREFIX ) ) {
 				$label = trim( mb_substr( $normalized, mb_strlen( self::ATTRIBUTE_PREFIX ) ) );
 				if ( '' !== $label ) {
 					$attributes[ $header ] = $label;
 				}
+				continue;
+			}
+
+			// قالب ووکامرس: ستون‌های جفتیِ «نام ۱ صفت» و «مقدار(های) ۱ صفت».
+			$pair = self::parse_wc_attribute_header( $normalized );
+			if ( $pair ) {
+				$wc_attr[ $pair['index'] ][ $pair['part'] ] = $header;
 				continue;
 			}
 
@@ -99,8 +114,73 @@ class PCS_Mapper {
 		return array(
 			'fields'     => $fields,
 			'attributes' => $attributes,
+			'wc_attributes' => self::pair_wc_attributes( $wc_attr ),
 			'unknown'    => $unknown,
 		);
+	}
+
+	/**
+	 * تشخیص ستون‌های صفت در خروجی ووکامرس.
+	 *
+	 * نمونه‌ها: «نام ۱ صفت»، «مقدار(های) ۱ صفت»، «Attribute 1 name».
+	 *
+	 * @param string $header سرستون یکدست‌شده.
+	 * @return array{index:int,part:string}|null
+	 */
+	protected static function parse_wc_attribute_header( $header ) {
+		$digits = self::latin_digits( $header );
+
+		if ( ! preg_match( '/(\d+)/', $digits, $number ) ) {
+			return null;
+		}
+
+		$index = (int) $number[1];
+		$flat  = self::key( $digits );
+
+		// پرانتزها در key() حذف می‌شوند، پس «مقدار(های) 1 صفت» به «مقدار1صفت» می‌رسد.
+		$parts = array(
+			'name'    => array( 'نام' . $index . 'صفت', 'attribute' . $index . 'name' ),
+			'values'  => array( 'مقدار' . $index . 'صفت', 'attribute' . $index . 'values', 'attribute' . $index . 'value' ),
+			'visible' => array( 'نمایانبودن' . $index . 'صفت', 'attribute' . $index . 'visible' ),
+			'global'  => array( 'صفت' . $index . 'سراسری', 'attribute' . $index . 'global' ),
+		);
+
+		foreach ( $parts as $part => $candidates ) {
+			foreach ( $candidates as $candidate ) {
+				if ( $flat === self::key( $candidate ) ) {
+					return array(
+						'index' => $index,
+						'part'  => $part,
+					);
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * نگه‌داشتن فقط جفت‌های کاملِ «نام + مقدار».
+	 *
+	 * @param array $groups گروه‌های خام.
+	 * @return array<int,array{name:string,values:string,global:?string}>
+	 */
+	protected static function pair_wc_attributes( $groups ) {
+		$pairs = array();
+
+		foreach ( $groups as $index => $group ) {
+			if ( empty( $group['name'] ) || empty( $group['values'] ) ) {
+				continue;
+			}
+
+			$pairs[ $index ] = array(
+				'name'   => $group['name'],
+				'values' => $group['values'],
+				'global' => isset( $group['global'] ) ? $group['global'] : null,
+			);
+		}
+
+		return $pairs;
 	}
 
 	/**
@@ -111,9 +191,13 @@ class PCS_Mapper {
 	 */
 	protected static function key( $label ) {
 		$label = PCS_Spreadsheet::normalize_header( $label );
+
+		// ووکامرس واحد را داخل پرانتز به سرستون می‌چسباند: «وزن (پوند)»، «درازا (اینچ)».
+		$label = preg_replace( '/\s*[\(（][^\)）]*[\)）]/u', '', $label );
+
 		$label = function_exists( 'mb_strtolower' ) ? mb_strtolower( $label, 'UTF-8' ) : strtolower( $label );
 
-		return str_replace( array( ' ', '_', '-' ), '', $label );
+		return str_replace( array( ' ', '_', '-', '؟', '?' ), '', $label );
 	}
 
 	/* ----------------------------- یکدست‌سازی مقادیر ----------------------------- */
@@ -164,7 +248,7 @@ class PCS_Mapper {
 	 * @return bool|null
 	 */
 	public static function boolean( $value ) {
-		$value = mb_strtolower( trim( (string) $value ), 'UTF-8' );
+		$value = mb_strtolower( trim( self::latin_digits( $value ) ), 'UTF-8' );
 
 		if ( '' === $value ) {
 			return null;
@@ -188,17 +272,18 @@ class PCS_Mapper {
 	 * @return string|null instock | outofstock | onbackorder
 	 */
 	public static function stock_status( $value ) {
-		$value = mb_strtolower( trim( (string) $value ), 'UTF-8' );
+		$value = mb_strtolower( trim( self::latin_digits( $value ) ), 'UTF-8' );
 
 		if ( '' === $value ) {
 			return null;
 		}
 
-		if ( in_array( $value, array( 'موجود', 'هست', 'در انبار', 'instock', 'in stock' ), true ) ) {
+		// ووکامرس ستون «در انبار؟» را به‌صورت ۱ و ۰ برون‌ریزی می‌کند.
+		if ( in_array( $value, array( 'موجود', 'هست', 'در انبار', 'instock', 'in stock', '1' ), true ) ) {
 			return 'instock';
 		}
 
-		if ( in_array( $value, array( 'ناموجود', 'نیست', 'تمام شد', 'outofstock', 'out of stock' ), true ) ) {
+		if ( in_array( $value, array( 'ناموجود', 'نیست', 'تمام شد', 'outofstock', 'out of stock', '0' ), true ) ) {
 			return 'outofstock';
 		}
 
@@ -216,21 +301,22 @@ class PCS_Mapper {
 	 * @return string|null publish | draft | private
 	 */
 	public static function post_status( $value ) {
-		$value = mb_strtolower( trim( (string) $value ), 'UTF-8' );
+		$value = mb_strtolower( trim( self::latin_digits( $value ) ), 'UTF-8' );
 
 		if ( '' === $value ) {
 			return null;
 		}
 
-		if ( in_array( $value, array( 'منتشر', 'منتشر شده', 'انتشار', 'فعال', 'publish', 'published', 'active' ), true ) ) {
+		// ووکامرس ستون «منتشر شده» را ۱ (منتشر)، ۰ (پیش‌نویس) و ‎-۱ (خصوصی) می‌دهد.
+		if ( in_array( $value, array( 'منتشر', 'منتشر شده', 'انتشار', 'فعال', 'publish', 'published', 'active', '1' ), true ) ) {
 			return 'publish';
 		}
 
-		if ( in_array( $value, array( 'پیش نویس', 'پیش‌نویس', 'غیرفعال', 'draft', 'inactive' ), true ) ) {
+		if ( in_array( $value, array( 'پیش نویس', 'پیش‌نویس', 'غیرفعال', 'draft', 'inactive', '0' ), true ) ) {
 			return 'draft';
 		}
 
-		if ( in_array( $value, array( 'خصوصی', 'private' ), true ) ) {
+		if ( in_array( $value, array( 'خصوصی', 'private', '-1' ), true ) ) {
 			return 'private';
 		}
 
