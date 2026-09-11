@@ -1,0 +1,149 @@
+/* ============================================================
+   پارسیان کارتن — استایل پیش‌فروش
+   ============================================================ */
+
+/* نشان روی کارت محصول (گوشه چپ تا با «حراج» تداخل نکند) */
+.preorder-card-badge {
+  right: auto;
+  left: 10px;
+  background: var(--green);
+  color: #fff;
+}
+
+/* دکمه کارت محصول */
+.preorder-card-btn {
+  flex: 1;
+  background: var(--green);
+  color: #fff;
+}
+.preorder-card-btn:hover {
+  background: #128a3e;
+  color: #fff;
+}
+
+/* نشان و زمان ارسال در صفحه محصول */
+.preorder-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.preorder-badge {
+  background: var(--green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+.preorder-lead {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+
+/* فرم پیش‌فروش */
+.preorder-form-wrap {
+  width: 100%;
+  margin-top: 14px;
+}
+.preorder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1.5px dashed var(--green);
+  border-radius: var(--radius);
+  background: var(--white);
+  max-width: 420px;
+}
+.preorder-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.preorder-form-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dark);
+}
+.preorder-form-row input,
+.preorder-form-row textarea {
+  font-family: inherit;
+  font-size: 14.5px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.preorder-form-row input:focus,
+.preorder-form-row textarea:focus {
+  outline: none;
+  border-color: var(--green);
+}
+.preorder-form-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+.preorder-submit {
+  align-self: flex-start;
+  background: var(--green);
+  color: #fff;
+  border: 0;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 30px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.preorder-submit:hover {
+  background: #128a3e;
+}
+.preorder-submit:disabled {
+  opacity: .65;
+  pointer-events: none;
+}
+.preorder-submit.loading {
+  opacity: .85;
+}
+.preorder-submit.loading::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-inline-end: 8px;
+  vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, .35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cartonpak-spin .7s linear infinite;
+}
+@keyframes cartonpak-spin {
+  to { transform: rotate(360deg); }
+}
+.preorder-form-msg {
+  display: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+.preorder-form-msg.is-ok {
+  display: block;
+  background: #ecfdf5;
+  color: #128a3e;
+  border: 1px solid #a7f3d0;
+}
+.preorder-form-msg.is-error {
+  display: block;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}

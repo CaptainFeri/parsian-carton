@@ -1,0 +1,110 @@
+/* پارسیان کارتن — ورود با پیامک OTP */
+
+.parsian-otp-wrap {
+	max-width: 460px;
+	margin: 0 auto;
+	padding: 8px 0 32px;
+	direction: rtl;
+}
+
+.parsian-otp-box {
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 16px;
+	padding: 28px 24px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.parsian-otp-title {
+	margin: 0 0 10px;
+	font-size: 20px;
+	font-weight: 800;
+	color: #111827;
+}
+
+.parsian-otp-intro {
+	margin: 0 0 18px;
+	font-size: 13.5px;
+	line-height: 2;
+	color: #6b7280;
+}
+
+.parsian-otp-msg {
+	display: none;
+	margin-bottom: 14px;
+	padding: 10px 14px;
+	border-radius: 10px;
+	font-size: 13px;
+	line-height: 1.9;
+	background: #f3f4f6;
+	color: #374151;
+}
+.parsian-otp-msg.is-error { background: #fef2f2; color: #b91c1c; }
+.parsian-otp-msg.is-success { background: #f0fdf4; color: #15803d; }
+
+.parsian-otp-field {
+	margin-bottom: 14px;
+}
+.parsian-otp-field label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #374151;
+}
+.parsian-otp-field input {
+	width: 100%;
+	padding: 11px 14px;
+	border: 1.5px solid #d1d5db;
+	border-radius: 10px;
+	font-size: 15px;
+	text-align: center;
+	letter-spacing: 2px;
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+.parsian-otp-field input:focus {
+	outline: none;
+	border-color: #2563eb;
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.parsian-otp-btn {
+	display: block;
+	width: 100%;
+	margin-top: 6px;
+	padding: 12px 16px;
+	border: 0;
+	border-radius: 10px;
+	background: #2563eb;
+	color: #fff;
+	font-size: 14.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.2s, opacity 0.2s;
+}
+.parsian-otp-btn:hover { background: #1d4ed8; }
+.parsian-otp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.parsian-otp-btn.is-loading { opacity: 0.7; }
+.parsian-otp-btn-verify { background: #059669; }
+.parsian-otp-btn-verify:hover { background: #047857; }
+
+.parsian-otp-code-step { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #e5e7eb; }
+
+.parsian-otp-hint {
+	display: block;
+	margin: 0 0 10px;
+	font-size: 12px;
+	color: #9ca3af;
+}
+
+.parsian-otp-resend {
+	display: inline-block;
+	margin-top: 12px;
+	font-size: 13px;
+	color: #2563eb;
+	text-decoration: underline;
+}
+
+.parsian-otp-code-step input[type="text"] {
+	direction: ltr;
+}
