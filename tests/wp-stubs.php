@@ -155,3 +155,39 @@ function wc_attribute_label( $taxonomy ) {
 	return $taxonomy;
 }
 $GLOBALS['pcs_attribute_taxonomies'] = array();
+
+/* --------------------------- رسانه و دیتابیس --------------------------- */
+
+class Fake_WPDB {
+	public $postmeta = 'wp_postmeta';
+	public $posts    = 'wp_posts';
+	public function prepare( $query, ...$args ) { return $query; }
+	public function esc_like( $text ) { return $text; }
+	// کتابخانهٔ رسانهٔ شبیه‌سازی‌شده: نگاشت «نام فایل یا نشانی» به شناسهٔ پیوست.
+	public function get_var( $query ) {
+		return isset( $GLOBALS['pcs_lookup_result'] ) ? $GLOBALS['pcs_lookup_result'] : 0;
+	}
+}
+
+$GLOBALS['wpdb'] = new Fake_WPDB();
+$GLOBALS['pcs_attachments'] = array();
+$GLOBALS['pcs_lookup_result'] = 0;
+
+function get_post_type( $id ) {
+	return isset( $GLOBALS['pcs_attachments'][ (int) $id ] ) ? 'attachment' : false;
+}
+
+function attachment_url_to_postid( $url ) {
+	$map = array_flip( $GLOBALS['pcs_attachments'] );
+	return isset( $map[ $url ] ) ? (int) $map[ $url ] : 0;
+}
+
+/**
+ * ثبت یک پیوست در کتابخانهٔ شبیه‌سازی‌شده.
+ *
+ * @param int    $id  شناسه.
+ * @param string $url نشانی.
+ */
+function pcs_test_add_attachment( $id, $url ) {
+	$GLOBALS['pcs_attachments'][ (int) $id ] = $url;
+}

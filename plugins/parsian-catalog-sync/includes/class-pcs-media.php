@@ -62,21 +62,56 @@ class PCS_Media {
 		return self::from_filename( $value );
 	}
 
+
 	/**
-	 * یافتن پیوست بر پایهٔ نام فایل.
+	 * یافتن شناسهٔ پیوستِ یک مقدار، بدون ساخت یا دانلود چیزی.
+	 *
+	 * در مرحلهٔ پیش‌نمایش لازم است بدانیم تصویر فعلی محصول همان تصویر فایل هست یا
+	 * نه. بدون این، مقدار فایل (نشانی) با مقدار محصول (شناسهٔ پیوست) مقایسه می‌شد و
+	 * هر بار برای همهٔ محصولات «تغییر تصویر» گزارش می‌شد.
+	 *
+	 * @param string $value مقدار سلول.
+	 * @return int شناسهٔ پیوست، یا ۰ اگر هنوز در سایت نباشد.
+	 */
+	public static function peek( $value ) {
+		$value = trim( (string) $value );
+
+		if ( '' === $value ) {
+			return 0;
+		}
+
+		if ( ctype_digit( $value ) ) {
+			return 'attachment' === get_post_type( (int) $value ) ? (int) $value : 0;
+		}
+
+		if ( preg_match( '#^https?://#i', $value ) ) {
+			$existing = self::find_by_source( $value );
+
+			if ( $existing ) {
+				return $existing;
+			}
+
+			// تصویری که روی همین سایت آپلود شده، از روی نشانی‌اش پیدا می‌شود.
+			return (int) attachment_url_to_postid( $value );
+		}
+
+		return (int) self::lookup_filename( $value );
+	}
+
+	/**
+	 * جستجوی پیوست بر پایهٔ نام فایل — فقط خواندن.
 	 *
 	 * @param string $filename نام فایل.
-	 * @return int|WP_Error
+	 * @return int
 	 */
-	protected static function from_filename( $filename ) {
+	protected static function lookup_filename( $filename ) {
 		global $wpdb;
 
 		$filename = ltrim( wp_normalize_path( $filename ), '/' );
 		$basename = wp_basename( $filename );
 
-		// جستجو بر پایهٔ پایان مسیر فایل در متای _wp_attached_file.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery
-		$id = (int) $wpdb->get_var(
+		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT post_id FROM {$wpdb->postmeta}
 				 WHERE meta_key = '_wp_attached_file'
@@ -87,6 +122,19 @@ class PCS_Media {
 			)
 		);
 		// phpcs:enable
+	}
+
+	/**
+	 * یافتن پیوست بر پایهٔ نام فایل.
+	 *
+	 * @param string $filename نام فایل.
+	 * @return int|WP_Error
+	 */
+	protected static function from_filename( $filename ) {
+
+		$filename = ltrim( wp_normalize_path( $filename ), '/' );
+		$basename = wp_basename( $filename );
+		$id       = self::lookup_filename( $filename );
 
 		if ( $id ) {
 			return $id;

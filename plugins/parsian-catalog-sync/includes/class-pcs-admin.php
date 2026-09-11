@@ -176,6 +176,7 @@ class PCS_Admin {
 				'price_unit'        => isset( $values['price_unit'] ) ? sanitize_key( $values['price_unit'] ) : 'toman',
 				'missing_action'    => isset( $values['missing_action'] ) ? sanitize_key( $values['missing_action'] ) : 'draft',
 				'create_attributes' => isset( $values['create_attributes'] ) ? 1 : 0,
+				'import_attributes' => isset( $values['import_attributes'] ) ? 1 : 0,
 				'source'            => isset( $values['source'] ) ? $values['source'] : '',
 				'sheet'             => isset( $values['sheet'] ) ? $values['sheet'] : '',
 				'schedule'          => isset( $values['schedule'] ) ? sanitize_key( $values['schedule'] ) : 'off',
@@ -680,7 +681,14 @@ class PCS_Admin {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'ویژگی‌ها', 'parsian-catalog-sync' ); ?></th>
 						<td>
-							<label>
+							<label style="display:block;margin-bottom:6px;">
+								<input type="checkbox" name="import_attributes" value="1" <?php checked( (bool) $settings->get( 'import_attributes' ) ); ?>>
+								<?php esc_html_e( 'ویژگی‌ها از فایل خوانده و روی محصولات اعمال شوند', 'parsian-catalog-sync' ); ?>
+							</label>
+							<p class="description" style="margin-bottom:10px;">
+								<?php esc_html_e( 'پیش‌فرض خاموش است. ویژگی‌های یک محصول متغیر، ساختار واریاسیون‌هایش را تعیین می‌کنند و بازنویسی‌شان از روی فایل می‌تواند پیوند واریاسیون‌ها را بشکند؛ به همین دلیل حتی با روشن بودن این گزینه، ویژگی‌ها فقط روی محصولات ساده اعمال می‌شوند.', 'parsian-catalog-sync' ); ?>
+							</p>
+							<label style="display:block;margin-bottom:6px;">
 								<input type="checkbox" name="create_attributes" value="1" <?php checked( (bool) $settings->get( 'create_attributes' ) ); ?>>
 								<?php esc_html_e( 'ویژگی‌های تازهٔ فایل به‌صورت ویژگی سراسری ساخته شوند', 'parsian-catalog-sync' ); ?>
 							</label>

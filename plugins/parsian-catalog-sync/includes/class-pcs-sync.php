@@ -94,6 +94,8 @@ class PCS_Sync {
 			'row'        => $number,
 			'sku'        => '',
 			'name'       => '',
+			'type'       => '',
+			'parent'     => '',
 			'action'     => 'unchanged',
 			'product_id' => 0,
 			'values'     => array(),
@@ -117,8 +119,22 @@ class PCS_Sync {
 			}
 		}
 
-		$row['sku']  = trim( (string) ( isset( $values['sku'] ) ? $values['sku'] : '' ) );
-		$row['name'] = trim( (string) ( isset( $values['name'] ) ? $values['name'] : '' ) );
+		// ستون‌های جفتیِ صفت در خروجی ووکامرس («نام ۱ صفت» + «مقدار(های) ۱ صفت»).
+		if ( ! empty( $mapping['wc_attributes'] ) ) {
+			foreach ( $mapping['wc_attributes'] as $group ) {
+				$label  = isset( $record[ $group['name'] ] ) ? trim( $record[ $group['name'] ] ) : '';
+				$values_raw = isset( $record[ $group['values'] ] ) ? trim( $record[ $group['values'] ] ) : '';
+
+				if ( '' !== $label && '' !== $values_raw ) {
+					$row['attributes'][ $label ] = PCS_Mapper::split( $values_raw );
+				}
+			}
+		}
+
+		$row['sku']    = trim( (string) ( isset( $values['sku'] ) ? $values['sku'] : '' ) );
+		$row['name']   = trim( (string) ( isset( $values['name'] ) ? $values['name'] : '' ) );
+		$row['type']   = strtolower( trim( (string) ( isset( $values['type'] ) ? $values['type'] : '' ) ) );
+		$row['parent'] = trim( (string) ( isset( $values['parent'] ) ? $values['parent'] : '' ) );
 
 		if ( '' === $row['sku'] ) {
 			$row['action']   = 'error';
@@ -143,7 +159,23 @@ class PCS_Sync {
 			return $row;
 		}
 
-		$prepared = self::prepare_values( $values, $row );
+		// ساخت محصول متغیر یا واریاسیون از روی فایل انجام نمی‌شود: واریاسیون به
+		// والد و نگاشت صفت‌ها وابسته است و ساختن نادرستش محصول را خراب می‌کند.
+		// به‌روزرسانی واریاسیون‌های موجود (قیمت، موجودی و…) کاملاً پشتیبانی می‌شود.
+		if ( ! $product && in_array( $row['type'], array( 'variable', 'variation' ), true ) ) {
+			$row['action']   = 'error';
+			$row['errors'][] = 'variation' === $row['type']
+				? __( 'این سطر یک واریاسیون تازه است. واریاسیون باید ابتدا در پیشخوان ذیل محصول متغیرش ساخته شود؛ بعد از آن قیمت و موجودی‌اش از فایل به‌روز می‌شود.', 'parsian-catalog-sync' )
+				: __( 'این سطر یک محصول متغیر تازه است. محصول متغیر و صفت‌هایش باید ابتدا در پیشخوان ساخته شود؛ بعد از آن از فایل به‌روز می‌شود.', 'parsian-catalog-sync' );
+			return $row;
+		}
+
+		// صفت‌ها فقط برای محصول ساده اعمال می‌شوند و به‌صورت پیش‌فرض خاموش‌اند.
+		if ( $row['attributes'] && ( ! PCS_Settings::instance()->get( 'import_attributes' ) || ! self::type_accepts_attributes( $row['type'] ) ) ) {
+			$row['attributes'] = array();
+		}
+
+		$prepared      = self::prepare_values( $values, $row );
 		$row['values'] = $prepared;
 
 		$row['changes'] = $product
@@ -173,6 +205,7 @@ class PCS_Sync {
 	protected static function prepare_values( $values, &$row ) {
 		$settings = PCS_Settings::instance();
 		$prepared = array();
+		$skip     = self::fields_to_skip( $row['type'] );
 
 		foreach ( $values as $field => $raw ) {
 			$raw = is_string( $raw ) ? trim( $raw ) : $raw;
@@ -182,8 +215,28 @@ class PCS_Sync {
 				continue;
 			}
 
+			// فیلدهایی که برای این نوع محصول بی‌معنا یا خطرناک‌اند نادیده گرفته می‌شوند.
+			if ( in_array( $field, $skip, true ) ) {
+				continue;
+			}
+
 			switch ( $field ) {
 				case 'sku':
+				case 'type':
+				case 'parent':
+					break;
+
+				case 'images':
+					// ووکامرس همه را در یک ستون می‌دهد: اولی تصویر شاخص، بقیه گالری.
+					$list = PCS_Mapper::split( $raw );
+
+					if ( $list ) {
+						$prepared['image'] = array_shift( $list );
+
+						if ( $list ) {
+							$prepared['gallery'] = $list;
+						}
+					}
 					break;
 
 				case 'regular_price':
@@ -292,6 +345,44 @@ class PCS_Sync {
 		}
 
 		return $prepared;
+	}
+
+
+	/**
+	 * فیلدهایی که برای یک نوع محصول نباید از فایل اعمال شوند.
+	 *
+	 * - **متغیر (variable):** قیمت و موجودیِ خودش معنا ندارد؛ این‌ها از واریاسیون‌ها
+	 *   می‌آیند. نوشتن قیمت روی والد، در فروشگاه دیده نمی‌شود ولی داده را گمراه‌کننده
+	 *   می‌کند.
+	 * - **واریاسیون (variation):** دسته‌بندی و برچسب ندارد (از والد می‌گیرد) و نامش
+	 *   خودکار از روی صفت‌ها ساخته می‌شود؛ نوشتن این‌ها بی‌اثر یا مخرب است.
+	 *
+	 * @param string $type نوع محصول در فایل.
+	 * @return string[]
+	 */
+	protected static function fields_to_skip( $type ) {
+		if ( 'variable' === $type ) {
+			return array( 'regular_price', 'sale_price', 'stock_quantity' );
+		}
+
+		if ( 'variation' === $type ) {
+			return array( 'categories', 'tags', 'featured', 'name' );
+		}
+
+		return array();
+	}
+
+	/**
+	 * آیا این نوع محصول اجازهٔ اعمال صفت‌ها از فایل را دارد؟
+	 *
+	 * صفت‌های محصول متغیر، ساختار واریاسیون‌هایش را تعیین می‌کنند؛ بازنویسی‌شان از
+	 * روی فایل می‌تواند پیوند واریاسیون‌ها را بشکند، پس فقط محصول ساده مجاز است.
+	 *
+	 * @param string $type نوع محصول.
+	 * @return bool
+	 */
+	protected static function type_accepts_attributes( $type ) {
+		return '' === $type || 'simple' === $type;
 	}
 
 	/**
@@ -430,8 +521,24 @@ class PCS_Sync {
 	 */
 	protected static function comparable( $field, $value ) {
 		if ( 'image' === $field ) {
-			// شناسهٔ پیوست فقط هنگام اعمال ساخته می‌شود؛ در پیش‌نمایش خود مقدار سلول نمایش داده می‌شود.
-			return (string) $value;
+			// مقدار فایل به شناسهٔ پیوست ترجمه می‌شود تا با مقدار فعلی محصول قابل
+			// مقایسه باشد؛ وگرنه نشانی با شناسه مقایسه می‌شد و هر بار برای همهٔ
+			// محصولات «تغییر تصویر» گزارش می‌شد.
+			$id = PCS_Media::peek( $value );
+
+			// پیدا نشد یعنی هنگام اعمال ساخته می‌شود؛ خود مقدار نمایش داده می‌شود.
+			return $id ? (string) $id : (string) $value;
+		}
+
+		if ( 'gallery' === $field ) {
+			$ids = array();
+
+			foreach ( (array) $value as $item ) {
+				$id    = PCS_Media::peek( $item );
+				$ids[] = $id ? (string) $id : (string) $item;
+			}
+
+			return implode( '،', $ids );
 		}
 
 		if ( is_array( $value ) ) {
