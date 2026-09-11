@@ -1,0 +1,7 @@
+# خروجی‌های موقت
+mysql-data/
+_extract/
+node_modules/
+
+# فایل‌هایی که آزمون‌ها هنگام اجرا می‌سازند
+tests/fixtures-products.csv

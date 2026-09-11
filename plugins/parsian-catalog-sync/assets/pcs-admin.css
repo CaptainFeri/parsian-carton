@@ -1,0 +1,118 @@
+/* صفحهٔ همگام‌سازی کاتالوگ — پیشخوان */
+
+.pcs-wrap .pcs-card {
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  padding: 6px 22px 22px;
+  margin: 18px 0;
+  max-width: 1180px;
+}
+
+.pcs-wrap .pcs-card > h2 {
+  font-size: 16px;
+  margin: 18px 0 6px;
+}
+
+.pcs-muted { color: #646970; }
+
+/* ---------- کارت‌های خلاصه ---------- */
+.pcs-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.pcs-stat {
+  flex: 1 1 120px;
+  border: 1px solid #dcdcde;
+  border-inline-start-width: 4px;
+  border-radius: 6px;
+  padding: 12px 14px;
+  background: #f6f7f7;
+}
+
+.pcs-stat-number { display: block; font-size: 22px; font-weight: 700; line-height: 1.2; }
+.pcs-stat-label { display: block; font-size: 12px; color: #646970; margin-top: 2px; }
+
+.pcs-stat-create { border-inline-start-color: #00a32a; }
+.pcs-stat-update { border-inline-start-color: #dba617; }
+.pcs-stat-unchanged { border-inline-start-color: #c3c4c7; }
+.pcs-stat-error { border-inline-start-color: #d63638; }
+.pcs-stat-missing { border-inline-start-color: #8c8f94; }
+
+/* ---------- جدول ---------- */
+.pcs-table { margin-top: 12px; }
+.pcs-table td { vertical-align: top; }
+.pcs-table code { font-size: 12px; }
+
+.pcs-badge {
+  display: inline-block;
+  border-radius: 3px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pcs-badge-create { background: #edfaef; color: #00701f; }
+.pcs-badge-update { background: #fcf9e8; color: #8a6500; }
+.pcs-badge-unchanged { background: #f0f0f1; color: #646970; }
+.pcs-badge-error { background: #fcf0f1; color: #b32d2e; }
+
+.pcs-row-error td { background: #fdf7f7; }
+
+/* ---------- تفاوت‌ها ---------- */
+.pcs-diff,
+.pcs-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+.pcs-diff li {
+  padding: 2px 0;
+  line-height: 1.8;
+}
+
+.pcs-diff-field {
+  display: inline-block;
+  min-width: 90px;
+  color: #646970;
+  font-weight: 600;
+}
+
+.pcs-diff del {
+  background: #fcf0f1;
+  color: #8a2424;
+  text-decoration: line-through;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.pcs-diff ins {
+  background: #edfaef;
+  color: #00701f;
+  text-decoration: none;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.pcs-issues li { padding: 2px 0; line-height: 1.7; }
+.pcs-issues-error li { color: #b32d2e; }
+.pcs-issues-warning li { color: #8a6500; }
+
+.pcs-apply-form {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #dcdcde;
+}
+
+.ltr { direction: ltr; text-align: left; }
+
+@media screen and (max-width: 782px) {
+  .pcs-stat { flex-basis: 100%; }
+  .pcs-diff-field { min-width: auto; display: block; }
+}
