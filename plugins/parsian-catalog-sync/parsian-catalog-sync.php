@@ -23,6 +23,7 @@ define( 'PCS_URL', plugin_dir_url( __FILE__ ) );
 require_once PCS_PATH . 'includes/helpers.php';
 require_once PCS_PATH . 'includes/class-pcs-spreadsheet.php';
 require_once PCS_PATH . 'includes/class-pcs-mapper.php';
+require_once PCS_PATH . 'includes/class-pcs-content.php';
 require_once PCS_PATH . 'includes/class-pcs-media.php';
 require_once PCS_PATH . 'includes/class-pcs-settings.php';
 require_once PCS_PATH . 'includes/class-pcs-sync.php';

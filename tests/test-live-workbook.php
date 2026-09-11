@@ -10,7 +10,7 @@
 require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
-foreach ( array( 'helpers', 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
+foreach ( array( 'helpers', 'class-pcs-content', 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
 	require $base . $class . '.php';
 }
 
@@ -44,6 +44,9 @@ check( 'هیچ ستون ناشناخته‌ای ندارد', $mapping['unknown']
 check( 'ستون کلید شناخته شد', in_array( 'sku', $mapping['fields'], true ), true );
 check( 'ستون نوع شناخته شد', in_array( 'type', $mapping['fields'], true ), true );
 check( 'ستون‌های صفت جفت شدند', count( $mapping['wc_attributes'] ), 1 );
+check( 'نوع فارسی شناخته می‌شود', PCS_Mapper::product_type( 'واریاسیون' ), 'variation' );
+check( 'وضعیت فارسی شناخته می‌شود', PCS_Mapper::post_status( 'منتشر' ), 'publish' );
+check( 'موجودی فارسی شناخته می‌شود', PCS_Mapper::stock_status( 'موجود' ), 'instock' );
 
 /* ---------- فروشگاه را از روی همین فایل بازسازی می‌کنیم ---------- */
 
@@ -54,14 +57,14 @@ foreach ( $data['rows'] as $record ) {
 	// فروشگاه با همان شناسه‌های فایل بازسازی می‌شود تا تطبیق بر پایهٔ شناسه هم
 	// واقعی سنجیده شود — از جمله محصولاتی که هنوز کد ندارند.
 	$id  = (int) $record['شناسه'];
-	$sku = trim( $record['شناسه محصول'] );
+	$sku = trim( $record['کد محصول'] );
 
 	if ( ! $id ) {
 		continue;
 	}
 
-	$type  = $record['نوع'];
-	$price = trim( $record['قیمت عادی'] );
+	$type  = PCS_Mapper::product_type( $record['نوع'] );
+	$price = trim( $record['قیمت'] );
 
 	$product = pcs_test_add_product(
 		$id,
@@ -69,17 +72,15 @@ foreach ( $data['rows'] as $record ) {
 			'sku'               => $sku,
 			'type'              => $type,
 			'name'              => trim( $record['نام'] ),
-			'description'       => trim( $record['توضیحات'] ),
-			'short_description' => trim( $record['توضیح کوتاه'] ),
-			'status'            => '1' === $record['منتشر شده'] ? 'publish' : 'draft',
-			'stock_status'      => '1' === $record['در انبار؟'] ? 'instock' : 'outofstock',
-			'featured'          => '1' === $record['آیا ویژه است؟'],
-			'menu_order'        => (int) $record['موقعیت'],
+			'description'       => PCS_Content::prepare( $record['توضیحات'] ),
+			'short_description' => PCS_Content::prepare( $record['توضیح کوتاه'] ),
+			'status'            => PCS_Mapper::post_status( $record['وضعیت انتشار'] ),
+			'stock_status'      => PCS_Mapper::stock_status( $record['وضعیت موجودی'] ),
 			'regular_price'     => ( '' !== $price && 'variable' !== $type ) ? (string) ( (float) $price * 10 ) : '',
 		)
 	);
 
-	$cats = trim( $record['دسته بندی ها'] );
+	$cats = trim( $record['دسته بندی'] );
 	if ( '' !== $cats && 'variation' !== $type ) {
 		$product->terms['product_cat'] = array_map( 'trim', explode( ',', $cats ) );
 	}

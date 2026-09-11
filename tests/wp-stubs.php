@@ -28,6 +28,7 @@ function apply_filters( $tag, $value ) { return $value; }
 function do_action( $tag ) {}
 function add_action( ...$args ) {}
 function add_filter( ...$args ) {}
+function esc_html( $v ) { return htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ); }
 function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
 function sanitize_key( $v ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $v ) ); }
 function sanitize_title( $v ) { return trim( preg_replace( '/[^\p{L}\p{N}]+/u', '-', (string) $v ), '-' ); }

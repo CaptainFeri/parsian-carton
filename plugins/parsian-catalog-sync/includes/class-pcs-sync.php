@@ -141,7 +141,7 @@ class PCS_Sync {
 		$row['id']     = isset( $values['id'] ) ? (int) PCS_Mapper::latin_digits( $values['id'] ) : 0;
 		$row['sku']    = trim( (string) ( isset( $values['sku'] ) ? $values['sku'] : '' ) );
 		$row['name']   = trim( (string) ( isset( $values['name'] ) ? $values['name'] : '' ) );
-		$row['type']   = strtolower( trim( (string) ( isset( $values['type'] ) ? $values['type'] : '' ) ) );
+		$row['type']   = PCS_Mapper::product_type( isset( $values['type'] ) ? $values['type'] : '' );
 		$row['parent'] = trim( (string) ( isset( $values['parent'] ) ? $values['parent'] : '' ) );
 
 		if ( ! $row['id'] && '' === $row['sku'] ) {
@@ -342,6 +342,12 @@ class PCS_Sync {
 					if ( null !== $flag ) {
 						$prepared['featured'] = $flag;
 					}
+					break;
+
+				case 'description':
+				case 'short_description':
+					// متن اکسل به HTML تمیز تبدیل و «\n»های تحت‌اللفظی ترمیم می‌شوند.
+					$prepared[ $field ] = PCS_Content::prepare( $raw );
 					break;
 
 				case 'categories':
