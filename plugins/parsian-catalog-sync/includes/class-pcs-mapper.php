@@ -133,19 +133,17 @@ class PCS_Mapper {
 	protected static function parse_wc_attribute_header( $header ) {
 		$digits = self::latin_digits( $header );
 
-		if ( ! preg_match( '/(\d+)/', $digits, $number ) ) {
-			return null;
-		}
-
-		$index = (int) $number[1];
+		// ووکامرس ستون‌ها را شماره‌گذاری می‌کند («نام ۱ صفت»)، ولی فایل تحویلی برای
+		// خوانایی شماره ندارد («نام صفت») — هر دو باید شناخته شوند.
+		$index = preg_match( '/(\d+)/', $digits, $number ) ? (int) $number[1] : 1;
 		$flat  = self::key( $digits );
 
 		// پرانتزها در key() حذف می‌شوند، پس «مقدار(های) 1 صفت» به «مقدار1صفت» می‌رسد.
 		$parts = array(
-			'name'    => array( 'نام' . $index . 'صفت', 'attribute' . $index . 'name' ),
-			'values'  => array( 'مقدار' . $index . 'صفت', 'attribute' . $index . 'values', 'attribute' . $index . 'value' ),
-			'visible' => array( 'نمایانبودن' . $index . 'صفت', 'attribute' . $index . 'visible' ),
-			'global'  => array( 'صفت' . $index . 'سراسری', 'attribute' . $index . 'global' ),
+			'name'    => array( 'نام' . $index . 'صفت', 'نامصفت', 'attribute' . $index . 'name', 'attributename' ),
+			'values'  => array( 'مقدار' . $index . 'صفت', 'مقدارصفت', 'مقادیرصفت', 'attribute' . $index . 'values', 'attribute' . $index . 'value', 'attributevalues' ),
+			'visible' => array( 'نمایانبودن' . $index . 'صفت', 'نمایانبودنصفت', 'attribute' . $index . 'visible', 'attributevisible' ),
+			'global'  => array( 'صفت' . $index . 'سراسری', 'صفتسراسری', 'attribute' . $index . 'global', 'attributeglobal' ),
 		);
 
 		foreach ( $parts as $part => $candidates ) {
@@ -324,6 +322,36 @@ class PCS_Mapper {
 		}
 
 		return null;
+	}
+
+	/**
+	 * یکدست‌سازی نوع محصول.
+	 *
+	 * فایل تحویلی نوع را به فارسی می‌نویسد تا خوانا باشد؛ ووکامرس مقدار انگلیسی
+	 * می‌خواهد.
+	 *
+	 * @param string $value مقدار سلول.
+	 * @return string simple | variable | variation | grouped | external | رشتهٔ خالی
+	 */
+	public static function product_type( $value ) {
+		$value = mb_strtolower( trim( (string) $value ), 'UTF-8' );
+
+		$map = array(
+			'ساده'       => 'simple',
+			'متغیر'      => 'variable',
+			'واریاسیون'  => 'variation',
+			'تنوع'       => 'variation',
+			'گروهی'      => 'grouped',
+			'خارجی'      => 'external',
+		);
+
+		$key = PCS_Spreadsheet::normalize_header( $value );
+
+		if ( isset( $map[ $key ] ) ) {
+			return $map[ $key ];
+		}
+
+		return $value;
 	}
 
 	/**

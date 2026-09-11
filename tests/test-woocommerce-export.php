@@ -11,6 +11,7 @@ require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
 require $base . 'helpers.php';
+require $base . 'class-pcs-content.php';
 require $base . 'class-pcs-spreadsheet.php';
 require $base . 'class-pcs-mapper.php';
 require $base . 'class-pcs-media.php';
@@ -64,8 +65,8 @@ foreach ( $data['rows'] as $record ) {
 	$fields = array(
 		'sku'          => $sku,
 		'name'         => trim( $record['نام'] ),
-		'description'  => trim( $record['توضیحات'] ),
-		'short_description' => trim( $record['توضیح کوتاه'] ),
+		'description'  => PCS_Content::prepare( $record['توضیحات'] ),
+		'short_description' => PCS_Content::prepare( $record['توضیح کوتاه'] ),
 		'status'       => '1' === $record['منتشر شده'] ? 'publish' : 'draft',
 		'stock_status' => '1' === $record['در انبار؟'] ? 'instock' : 'outofstock',
 		'featured'     => '1' === $record['آیا ویژه است؟'],
@@ -158,6 +159,55 @@ check( 'روی محصول متغیر، قیمت اعمال نمی‌شود', iss
 check( 'روی واریاسیون، قیمت اعمال می‌شود', isset( $by_type['variation']['values']['regular_price'] ), true );
 check( 'روی واریاسیون، دسته‌بندی اعمال نمی‌شود', isset( $by_type['variation']['values']['categories'] ), false );
 check( 'روی محصول ساده، دسته‌بندی اعمال می‌شود', isset( $by_type['simple']['values']['categories'] ), true );
+
+/* ---------- ترمیم توضیحات خراب ---------- */
+
+// توضیحات این فروشگاه رشتهٔ تحت‌اللفظی «\n» دارند که در صفحهٔ محصول به‌صورت «n»
+// دیده می‌شود. اگر محصول هنوز متن خراب را داشته باشد، ورود فایل باید همان را
+// ترمیم کند — و تنها همان را، نه چیز دیگری.
+$broken_count = 0;
+
+foreach ( $data['rows'] as $record ) {
+	$id = (int) $record['شناسه'];
+	$raw = (string) $record['توضیحات'];
+
+	if ( '' === trim( $raw ) || false === strpos( $raw, '\\n' ) ) {
+		continue;
+	}
+
+	$product = wc_get_product( $id );
+
+	if ( $product ) {
+		$product->data['description'] = $raw;
+		$broken_count++;
+	}
+}
+
+check( 'فیکسچر توضیحات خراب دارد', $broken_count > 0, true );
+
+$repair = PCS_Sync::plan( $csv );
+
+check( 'ترمیم — تعداد محصولات به‌روزشده', $repair['summary']['update'], $broken_count );
+
+foreach ( $repair['rows'] as $row ) {
+	if ( 'update' !== $row['action'] ) {
+		continue;
+	}
+
+	check(
+		sprintf( 'ترمیم %s — تنها توضیحات تغییر می‌کند', $row['sku'] ),
+		array_keys( $row['changes'] ),
+		array( 'description' )
+	);
+
+	check(
+		sprintf( 'ترمیم %s — «\\n» تحت‌اللفظی از متن تازه رفته', $row['sku'] ),
+		false !== strpos( $row['changes']['description']['to'], '\\n' ),
+		false
+	);
+
+	break;
+}
 
 echo $failures ? "\n{$failures} آزمون شکست خورد.\n" : "\nهمهٔ آزمون‌ها موفق بودند.\n";
 exit( $failures ? 1 : 0 );
