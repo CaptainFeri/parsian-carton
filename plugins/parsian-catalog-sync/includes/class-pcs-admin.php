@@ -69,7 +69,7 @@ class PCS_Admin {
 	 * @param string $hook شناسهٔ صفحهٔ جاری.
 	 */
 	public function enqueue( $hook ) {
-		if ( false === strpos( $hook, self::PAGE ) ) {
+		if ( false === strpos( $hook, self::PAGE ) && false === strpos( $hook, PCS_Attribute_Admin::PAGE ) ) {
 			return;
 		}
 

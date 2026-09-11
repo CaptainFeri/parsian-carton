@@ -88,6 +88,9 @@ class Fake_Product {
 	public function get_height( $ctx = 'view' ) { return $this->data['height']; }
 	public function get_menu_order() { return $this->data['menu_order']; }
 	public function get_attributes() { return $this->attributes; }
+	public function get_type() { return isset( $this->data['type'] ) ? $this->data['type'] : 'simple'; }
+	public function is_type( $type ) { return $this->get_type() === $type; }
+	public function get_children() { return isset( $this->data['children'] ) ? $this->data['children'] : array(); }
 
 	public function __call( $name, $args ) {
 		if ( 0 === strpos( $name, 'set_' ) ) {
@@ -109,6 +112,16 @@ class Fake_Product {
 			$this->id = ++$GLOBALS['pcs_next_id'];
 			$GLOBALS['pcs_products'][ $this->id ] = $this;
 		}
+
+		// WC_Product_Data_Store_CPT::update_attributes ترم‌های صفت سراسری را به
+		// محصول وصل می‌کند؛ برای اینکه آزمون واقعاً چیزی را بسنجد، اینجا هم همان
+		// رفتار بازسازی می‌شود.
+		foreach ( $this->attributes as $attribute ) {
+			if ( $attribute instanceof WC_Product_Attribute && $attribute->is_taxonomy() ) {
+				wp_set_object_terms( $this->id, $attribute->get_options(), $attribute->get_name() );
+			}
+		}
+
 		return $this->id;
 	}
 }
@@ -139,7 +152,22 @@ function wc_get_product_id_by_sku( $sku ) {
 	return 0;
 }
 
-function get_posts( $args ) { return array_keys( $GLOBALS['pcs_products'] ); }
+function get_posts( $args ) {
+	$types = isset( $args['post_type'] ) ? (array) $args['post_type'] : array( 'product' );
+	$ids   = array();
+
+	foreach ( $GLOBALS['pcs_products'] as $id => $product ) {
+		// در وردپرس واقعی واریاسیون نوع post جداگانه‌ای دارد و در پرس‌وجوی
+		// post_type=product نمی‌آید.
+		$post_type = $product->is_type( 'variation' ) ? 'product_variation' : 'product';
+
+		if ( in_array( $post_type, $types, true ) ) {
+			$ids[] = $id;
+		}
+	}
+
+	return $ids;
+}
 
 function wp_get_object_terms( $post_id, $taxonomy, $args = array() ) {
 	$product = wc_get_product( $post_id );
@@ -191,3 +219,96 @@ function attachment_url_to_postid( $url ) {
 function pcs_test_add_attachment( $id, $url ) {
 	$GLOBALS['pcs_attachments'][ (int) $id ] = $url;
 }
+
+/* ------------------------ صفت‌ها و واریاسیون‌ها ------------------------ */
+
+class WC_Product_Attribute {
+	protected $id = 0, $name = '', $options = array(), $position = 0;
+	protected $visible = true, $variation = false;
+	public function set_id( $v ) { $this->id = (int) $v; }
+	public function set_name( $v ) { $this->name = $v; }
+	public function set_options( $v ) { $this->options = (array) $v; }
+	public function set_position( $v ) { $this->position = (int) $v; }
+	public function set_visible( $v ) { $this->visible = (bool) $v; }
+	public function set_variation( $v ) { $this->variation = (bool) $v; }
+	public function get_id() { return $this->id; }
+	public function get_name() { return $this->name; }
+	public function get_options() { return $this->options; }
+	public function get_position() { return $this->position; }
+	public function get_visible() { return $this->visible; }
+	public function get_variation() { return $this->variation; }
+	public function is_taxonomy() { return 0 === strpos( $this->name, 'pa_' ); }
+	public function get_terms() {
+		$terms = array();
+		foreach ( $this->options as $id ) {
+			$term = get_term( (int) $id, $this->name );
+			if ( $term ) { $terms[] = $term; }
+		}
+		return $terms;
+	}
+}
+
+/** ترم شبیه‌سازی‌شده. */
+class Fake_Term {
+	public $term_id, $name, $slug, $taxonomy;
+	public function __construct( $id, $name, $slug, $taxonomy ) {
+		$this->term_id = $id; $this->name = $name; $this->slug = $slug; $this->taxonomy = $taxonomy;
+	}
+}
+
+$GLOBALS['pcs_terms'] = array();
+$GLOBALS['pcs_next_term'] = 500;
+$GLOBALS['pcs_taxonomies'] = array();
+$GLOBALS['pcs_object_terms'] = array();
+
+function wc_attribute_taxonomy_id_by_name( $slug ) {
+	$slug = str_replace( 'pa_', '', $slug );
+	return isset( $GLOBALS['pcs_taxonomies'][ $slug ] ) ? $GLOBALS['pcs_taxonomies'][ $slug ] : 0;
+}
+
+function wc_create_attribute( $args ) {
+	$slug = $args['slug'];
+	$GLOBALS['pcs_taxonomies'][ $slug ] = count( $GLOBALS['pcs_taxonomies'] ) + 1;
+	$GLOBALS['pcs_attribute_taxonomies'][] = (object) array(
+		'attribute_name'  => $slug,
+		'attribute_label' => $args['name'],
+	);
+	return $GLOBALS['pcs_taxonomies'][ $slug ];
+}
+
+function taxonomy_exists( $taxonomy ) {
+	return (bool) wc_attribute_taxonomy_id_by_name( $taxonomy );
+}
+
+function register_taxonomy( $taxonomy, $type, $args = array() ) { return true; }
+
+function get_term_by( $field, $value, $taxonomy ) {
+	foreach ( $GLOBALS['pcs_terms'] as $term ) {
+		if ( $term->taxonomy !== $taxonomy ) { continue; }
+		if ( 'name' === $field && $term->name === $value ) { return $term; }
+		if ( 'slug' === $field && $term->slug === $value ) { return $term; }
+	}
+	return false;
+}
+
+function get_term( $id, $taxonomy = '' ) {
+	return isset( $GLOBALS['pcs_terms'][ (int) $id ] ) ? $GLOBALS['pcs_terms'][ (int) $id ] : null;
+}
+
+function wp_insert_term( $name, $taxonomy, $args = array() ) {
+	$existing = get_term_by( 'name', $name, $taxonomy );
+	if ( $existing ) {
+		return new WP_Error( 'term_exists', 'exists', $existing->term_id );
+	}
+	$id = ++$GLOBALS['pcs_next_term'];
+	$GLOBALS['pcs_terms'][ $id ] = new Fake_Term( $id, $name, sanitize_title( $name ), $taxonomy );
+	return array( 'term_id' => $id );
+}
+
+function wp_set_object_terms( $object_id, $terms, $taxonomy, $append = false ) {
+	$GLOBALS['pcs_object_terms'][ $object_id ][ $taxonomy ] = (array) $terms;
+	return (array) $terms;
+}
+
+function wc_delete_product_transients() {}
+function wc_get_product_terms( $id, $taxonomy, $args = array() ) { return array(); }

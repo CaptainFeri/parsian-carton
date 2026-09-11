@@ -27,7 +27,9 @@ require_once PCS_PATH . 'includes/class-pcs-media.php';
 require_once PCS_PATH . 'includes/class-pcs-settings.php';
 require_once PCS_PATH . 'includes/class-pcs-sync.php';
 require_once PCS_PATH . 'includes/class-pcs-scheduler.php';
+require_once PCS_PATH . 'includes/class-pcs-attribute-migrator.php';
 require_once PCS_PATH . 'includes/class-pcs-admin.php';
+require_once PCS_PATH . 'includes/class-pcs-attribute-admin.php';
 
 /**
  * راه‌اندازی افزونه.
@@ -42,6 +44,7 @@ function pcs_bootstrap() {
 
 	if ( is_admin() ) {
 		PCS_Admin::instance();
+		PCS_Attribute_Admin::instance();
 	}
 }
 add_action( 'plugins_loaded', 'pcs_bootstrap' );
