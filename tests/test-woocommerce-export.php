@@ -10,6 +10,7 @@
 require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
+require $base . 'helpers.php';
 require $base . 'class-pcs-spreadsheet.php';
 require $base . 'class-pcs-mapper.php';
 require $base . 'class-pcs-media.php';
@@ -43,12 +44,17 @@ if ( is_wp_error( $data ) ) {
 	exit( 1 );
 }
 
-$next_id     = 1000;
 $attachments = array();
+// شناسهٔ پیوست‌ها از محدودهٔ دور انتخاب می‌شود تا با شناسهٔ محصولات قاطی نشود.
+$next_attachment = 900000;
 
 foreach ( $data['rows'] as $record ) {
+	// فروشگاه با همان شناسه‌های فایل بازسازی می‌شود تا تطبیق بر پایهٔ شناسه هم
+	// واقعی سنجیده شود — از جمله محصولاتی که هنوز کد ندارند.
+	$id  = (int) $record['شناسه'];
 	$sku = trim( $record['شناسه محصول'] );
-	if ( '' === $sku ) {
+
+	if ( ! $id ) {
 		continue;
 	}
 
@@ -68,7 +74,6 @@ foreach ( $data['rows'] as $record ) {
 		'regular_price' => ( '' !== $price && 'variable' !== $type ) ? (string) ( (float) $price * 10 ) : '',
 	);
 
-	$id      = ++$next_id;
 	$product = pcs_test_add_product( $id, $fields );
 
 	// دسته‌بندی‌ها (واریاسیون دسته ندارد).
@@ -87,7 +92,7 @@ foreach ( $data['rows'] as $record ) {
 
 		foreach ( $images as $url ) {
 			if ( ! isset( $attachments[ $url ] ) ) {
-				$attachments[ $url ] = ++$next_id;
+				$attachments[ $url ] = ++$next_attachment;
 				pcs_test_add_attachment( $attachments[ $url ], $url );
 			}
 			$ids[] = $attachments[ $url ];
@@ -112,17 +117,9 @@ check( 'هیچ محصولی ساخته نمی‌شود', $plan['summary']['creat
 check( 'هیچ محصولی به‌روزرسانی نمی‌شود', $plan['summary']['update'], 0 );
 check( 'هیچ محصولی «در فایل نیست» شمرده نمی‌شود', count( $plan['missing'] ), 0 );
 
-// تنها خطاها باید مربوط به همان ۳ سطر بدون کد محصول باشد.
-check( 'فقط سطرهای بدون کد خطا دارند', $plan['summary']['error'], 3 );
-check( 'همهٔ سطرهای دارای کد، بدون تغییر', $plan['summary']['unchanged'], count( $GLOBALS['pcs_products'] ) );
-
-$reasons = array();
-foreach ( $plan['rows'] as $row ) {
-	foreach ( $row['errors'] as $error ) {
-		$reasons[ $error ] = true;
-	}
-}
-check( 'تنها یک نوع خطا وجود دارد', count( $reasons ), 1 );
+// محصولات بدون کد هم با «شناسه» شناسایی می‌شوند، پس خطایی نمی‌ماند.
+check( 'هیچ سطری خطا ندارد', $plan['summary']['error'], 0 );
+check( 'همهٔ سطرها بدون تغییر', $plan['summary']['unchanged'], count( $GLOBALS['pcs_products'] ) );
 
 /* ---------- تغییر واقعی باید دیده شود ---------- */
 

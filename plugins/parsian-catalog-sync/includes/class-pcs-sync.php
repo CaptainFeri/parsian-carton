@@ -48,6 +48,7 @@ class PCS_Sync {
 		$rows      = array();
 		$seen      = array();
 		$file_skus = array();
+		$file_ids  = array();
 
 		foreach ( $data['rows'] as $index => $record ) {
 			// شمارهٔ سطر برای پیام‌های خطا، با فرض یک سطر سرستون.
@@ -68,12 +69,17 @@ class PCS_Sync {
 				}
 			}
 
+			// محصولی که در فایل با شناسه آمده، «غایب» نیست حتی اگر هنوز کد نداشته باشد.
+			if ( $row['product_id'] ) {
+				$file_ids[] = (int) $row['product_id'];
+			}
+
 			$rows[] = $row;
 		}
 
 		return array(
 			'rows'       => $rows,
-			'missing'    => self::find_missing( $file_skus ),
+			'missing'    => self::find_missing( $file_skus, $file_ids ),
 			'mapping'    => $mapping,
 			'summary'    => self::summarize( $rows ),
 			'sheet'      => $sheet,
@@ -92,6 +98,7 @@ class PCS_Sync {
 	protected static function plan_row( $record, $mapping, $number ) {
 		$row = array(
 			'row'        => $number,
+			'id'         => 0,
 			'sku'        => '',
 			'name'       => '',
 			'type'       => '',
@@ -131,27 +138,53 @@ class PCS_Sync {
 			}
 		}
 
+		$row['id']     = isset( $values['id'] ) ? (int) PCS_Mapper::latin_digits( $values['id'] ) : 0;
 		$row['sku']    = trim( (string) ( isset( $values['sku'] ) ? $values['sku'] : '' ) );
 		$row['name']   = trim( (string) ( isset( $values['name'] ) ? $values['name'] : '' ) );
 		$row['type']   = strtolower( trim( (string) ( isset( $values['type'] ) ? $values['type'] : '' ) ) );
 		$row['parent'] = trim( (string) ( isset( $values['parent'] ) ? $values['parent'] : '' ) );
 
-		if ( '' === $row['sku'] ) {
+		if ( ! $row['id'] && '' === $row['sku'] ) {
 			$row['action']   = 'error';
-			$row['errors'][] = __( 'ستون «کد محصول» خالی است؛ این سطر نادیده گرفته می‌شود.', 'parsian-catalog-sync' );
+			$row['errors'][] = __( 'نه ستون «شناسه» پر است نه «کد محصول»؛ بدون یکی از این دو، محصول قابل شناسایی نیست.', 'parsian-catalog-sync' );
 			return $row;
 		}
 
-		$product_id = wc_get_product_id_by_sku( $row['sku'] );
-		$product    = $product_id ? wc_get_product( $product_id ) : null;
+		// مثل درون‌ریز خود ووکامرس: اول شناسه، بعد کد محصول. این ترتیب اجازه می‌دهد
+		// به محصولی که هنوز کد ندارد، از راه فایل کد داده شود — با کلید کد تنها،
+		// چنین سطری «محصول تازه» دیده می‌شد و نسخهٔ تکراری ساخته می‌شد.
+		$product = null;
 
-		if ( $product_id && ! $product ) {
-			$row['action']   = 'error';
-			$row['errors'][] = __( 'محصولی با این کد در دیتابیس هست ولی خوانده نشد.', 'parsian-catalog-sync' );
-			return $row;
+		if ( $row['id'] ) {
+			$candidate = wc_get_product( $row['id'] );
+
+			if ( $candidate ) {
+				$product = $candidate;
+			}
 		}
 
-		$row['product_id'] = (int) $product_id;
+		if ( ! $product && '' !== $row['sku'] ) {
+			$by_sku  = wc_get_product_id_by_sku( $row['sku'] );
+			$product = $by_sku ? wc_get_product( $by_sku ) : null;
+		}
+
+		$row['product_id'] = $product ? (int) $product->get_id() : 0;
+
+		// کدی که قرار است نوشته شود نباید متعلق به محصول دیگری باشد.
+		if ( $product && '' !== $row['sku'] && $product->get_sku() !== $row['sku'] ) {
+			$owner = wc_get_product_id_by_sku( $row['sku'] );
+
+			if ( $owner && (int) $owner !== (int) $product->get_id() ) {
+				$row['action']   = 'error';
+				$row['errors'][] = sprintf(
+					/* translators: 1: کد محصول، 2: شناسهٔ محصول دیگر. */
+					__( 'کد «%1$s» از قبل روی محصول دیگری (شناسه %2$s) نشسته است؛ کد باید یکتا باشد.', 'parsian-catalog-sync' ),
+					$row['sku'],
+					pcs_digits( $owner )
+				);
+				return $row;
+			}
+		}
 
 		if ( ! $product && '' === $row['name'] ) {
 			$row['action']   = 'error';
@@ -221,6 +254,8 @@ class PCS_Sync {
 			}
 
 			switch ( $field ) {
+				// کلیدهای شناسایی و ساختار — نوشتنی نیستند و نباید در تفاوت‌ها بیایند.
+				case 'id':
 				case 'sku':
 				case 'type':
 				case 'parent':
@@ -395,6 +430,15 @@ class PCS_Sync {
 	 */
 	protected static function diff_existing( $product, $values, &$row ) {
 		$changes = array();
+
+		// کد محصول جزو $values نیست (کلید تطبیق است)، ولی وقتی سطر با شناسه پیدا
+		// شده باشد ممکن است کد تازه‌ای به محصول داده شود؛ این باید در پیش‌نمایش دیده شود.
+		if ( '' !== $row['sku'] && $product->get_sku() !== $row['sku'] ) {
+			$changes['sku'] = array(
+				'from' => (string) $product->get_sku(),
+				'to'   => $row['sku'],
+			);
+		}
 
 		foreach ( $values as $field => $value ) {
 			$current = self::current_value( $product, $field );
@@ -606,7 +650,7 @@ class PCS_Sync {
 	 * @param string[] $file_skus کدهای موجود در فایل.
 	 * @return array[]
 	 */
-	protected static function find_missing( $file_skus ) {
+	protected static function find_missing( $file_skus, $file_ids = array() ) {
 		$ids = get_posts(
 			array(
 				'post_type'      => 'product',
@@ -619,8 +663,13 @@ class PCS_Sync {
 
 		$missing = array();
 		$lookup  = array_flip( $file_skus );
+		$by_id   = array_flip( array_map( 'intval', $file_ids ) );
 
 		foreach ( $ids as $id ) {
+			if ( isset( $by_id[ (int) $id ] ) ) {
+				continue;
+			}
+
 			$product = wc_get_product( $id );
 
 			if ( ! $product ) {
@@ -815,7 +864,10 @@ class PCS_Sync {
 
 		$values = $row['values'];
 
-		$product->set_sku( $row['sku'] );
+		// کد خالی در فایل یعنی «دست نزن»، نه «پاک کن».
+		if ( '' !== $row['sku'] ) {
+			$product->set_sku( $row['sku'] );
+		}
 
 		if ( isset( $values['name'] ) ) {
 			$product->set_name( $values['name'] );

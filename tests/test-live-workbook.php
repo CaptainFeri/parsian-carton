@@ -10,7 +10,7 @@
 require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
-foreach ( array( 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
+foreach ( array( 'helpers', 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
 	require $base . $class . '.php';
 }
 
@@ -47,12 +47,16 @@ check( 'ستون‌های صفت جفت شدند', count( $mapping['wc_attribute
 
 /* ---------- فروشگاه را از روی همین فایل بازسازی می‌کنیم ---------- */
 
-$next_id     = 2000;
 $attachments = array();
+$next_attachment = 900000;
 
 foreach ( $data['rows'] as $record ) {
+	// فروشگاه با همان شناسه‌های فایل بازسازی می‌شود تا تطبیق بر پایهٔ شناسه هم
+	// واقعی سنجیده شود — از جمله محصولاتی که هنوز کد ندارند.
+	$id  = (int) $record['شناسه'];
 	$sku = trim( $record['شناسه محصول'] );
-	if ( '' === $sku ) {
+
+	if ( ! $id ) {
 		continue;
 	}
 
@@ -60,7 +64,7 @@ foreach ( $data['rows'] as $record ) {
 	$price = trim( $record['قیمت عادی'] );
 
 	$product = pcs_test_add_product(
-		++$next_id,
+		$id,
 		array(
 			'sku'               => $sku,
 			'type'              => $type,
@@ -85,7 +89,7 @@ foreach ( $data['rows'] as $record ) {
 		$ids = array();
 		foreach ( $images as $url ) {
 			if ( ! isset( $attachments[ $url ] ) ) {
-				$attachments[ $url ] = ++$next_id;
+				$attachments[ $url ] = ++$next_attachment;
 				pcs_test_add_attachment( $attachments[ $url ], $url );
 			}
 			$ids[] = $attachments[ $url ];
@@ -107,7 +111,7 @@ check( 'هیچ محصولی ساخته نمی‌شود', $plan['summary']['creat
 check( 'هیچ محصولی به‌روزرسانی نمی‌شود', $plan['summary']['update'], 0 );
 check( 'همهٔ محصولات بدون تغییر', $plan['summary']['unchanged'], count( $GLOBALS['pcs_products'] ) );
 check( 'هیچ محصولی غایب شمرده نمی‌شود', count( $plan['missing'] ), 0 );
-check( 'فقط سطرهای بدون کد خطا دارند', $plan['summary']['error'], 3 );
+check( 'هیچ سطری خطا ندارد', $plan['summary']['error'], 0 );
 
 /* ---------- ترکیب کاتالوگ ---------- */
 
@@ -121,6 +125,72 @@ check( 'تعداد محصولات ساده', $types['simple'], 41 );
 check( 'تعداد محصولات متغیر', $types['variable'], 58 );
 check( 'تعداد واریاسیون‌ها', $types['variation'], 116 );
 check( 'مجموع سطرها', count( $plan['rows'] ), 215 );
+
+/* ---------- نسبت دادن کد به محصولی که کد ندارد ---------- */
+
+// سه محصول «اسباب‌کشی چاپ‌دار» روی سایت کد ندارند. حالا که در فایل برایشان کد
+// گذاشته شده، باید به همان محصول موجود نسبت داده شود — نه اینکه محصول تکراری
+// ساخته شود. تطبیق بر پایهٔ «شناسه» همین را ممکن می‌کند.
+$without_sku = array( 98, 99, 100 );
+
+foreach ( $without_sku as $id ) {
+	$product = wc_get_product( $id );
+
+	if ( $product ) {
+		$product->data['sku'] = '';
+	}
+}
+
+$assign = PCS_Sync::plan( $workbook );
+
+check( 'نسبت دادن کد — هیچ محصول تازه‌ای ساخته نمی‌شود', $assign['summary']['create'], 0 );
+check( 'نسبت دادن کد — دقیقاً سه محصول به‌روز می‌شوند', $assign['summary']['update'], 3 );
+check( 'نسبت دادن کد — بدون خطا', $assign['summary']['error'], 0 );
+
+$assigned = array();
+
+foreach ( $assign['rows'] as $row ) {
+	if ( 'update' !== $row['action'] ) {
+		continue;
+	}
+
+	check(
+		sprintf( 'شناسه %d — تنها فیلد تغییرکرده «کد محصول» است', $row['id'] ),
+		array_keys( $row['changes'] ),
+		array( 'sku' )
+	);
+
+	check( sprintf( 'شناسه %d — کد قبلی خالی بوده', $row['id'] ), $row['changes']['sku']['from'], '' );
+
+	$assigned[ $row['id'] ] = $row['changes']['sku']['to'];
+}
+
+check(
+	'کدهای نسبت‌داده‌شده',
+	$assigned,
+	array(
+		98  => 'movingcartons-50-30-35-print',
+		99  => 'movingcartons-60-40-40-print',
+		100 => 'movingcartons-70-50-40-print',
+	)
+);
+
+// کد تکراری باید جلوی نوشتن را بگیرد.
+$clash = wc_get_product( 98 );
+$clash->data['sku'] = '';
+$other = wc_get_product( 95 );
+$other->data['sku'] = 'movingcartons-50-30-35-print';
+
+$conflict = PCS_Sync::plan( $workbook );
+$blocked  = false;
+
+foreach ( $conflict['rows'] as $row ) {
+	if ( 98 === (int) $row['id'] && 'error' === $row['action'] ) {
+		$blocked = true;
+	}
+}
+
+check( 'کد تکراری با محصول دیگر، خطا می‌دهد', $blocked, true );
 
 echo $failures ? "\n{$failures} آزمون شکست خورد.\n" : "\nهمهٔ آزمون‌ها موفق بودند.\n";
 exit( $failures ? 1 : 0 );

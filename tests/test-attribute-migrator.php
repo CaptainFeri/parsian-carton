@@ -11,6 +11,7 @@
 require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
+require $base . 'helpers.php';
 require $base . 'class-pcs-spreadsheet.php';
 require $base . 'class-pcs-attribute-migrator.php';
 
