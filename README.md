@@ -10,6 +10,34 @@
 - دیتابیس قابل مدیریت با **phpMyAdmin**
 - `اطلاعات محصولات.xlsx` و `رزومه شرکت.xlsx` — منبع اصلی داده‌ها (محصولات و اطلاعات شرکت)
 
+## چه چیزی داخل گیت است؟
+
+مخزن گیت فقط این‌ها را نگه می‌دارد — بقیهٔ فایل‌های بالا روی کامپیوتر خودتان
+(از باز کردن آرشیو) ساخته می‌شوند و در گیت نیستند:
+
+```
+README.md            این فایل
+docker-compose.yml   تعریف سرویس‌ها
+wordpress.zip        آرشیو کل نصب وردپرس (۵۶ مگابایت)
+plugins/             افزونه‌های اختصاصی پروژه
+docs/                راهنماها + قالب اکسل نمونه
+tests/  tools/       آزمون‌ها و اسکریپت‌های کمکی
+```
+
+برای ساختن پوشهٔ `wordpress/` از آرشیو:
+
+```powershell
+# ویندوز
+Expand-Archive wordpress.zip -DestinationPath .
+
+# لینوکس / مک
+unzip wordpress.zip
+```
+
+> آرشیو تا پیش از این `wordpress.rar` بود. از این نسخه zip است تا بدون نرم‌افزار
+> جانبی روی هر سیستمی باز شود — محتوا مو‌به‌مو همان است.
+> جزئیات در [راهنمای نصب و استقرار](docs/نصب-و-استقرار.md).
+
 ## پیش‌نیاز
 
 - [Docker](https://www.docker.com/products/docker-desktop/) + Docker Compose
@@ -54,7 +82,8 @@ docker compose run --rm wpcli bash /setup/init.sh
 
 ```
 ├── docker-compose.yml      سرویس‌ها: mysql، redis، wordpress، wpcli، phpmyadmin
-├── wordpress/              کل نصب وردپرس (پایه = بکاپ سایت):
+├── wordpress.zip           آرشیو کل نصب وردپرس (تنها نسخهٔ داخل گیت)
+├── wordpress/              کل نصب وردپرس — از باز کردن wordpress.zip ساخته می‌شود:
 │   ├── wp-admin, wp-includes, ...      هسته وردپرس
 │   └── wp-content/themes/cartonpak     قالب اختصاصی سایت
 │   └── wp-content/plugins              ووکامرس، پارسیان OTP، آک‌یسمت
@@ -159,7 +188,7 @@ docker compose run --rm wpcli wp theme activate cartonpak
 
 ## افزونه‌های اختصاصی پروژه (پوشهٔ `plugins/`)
 
-دو افزونهٔ اختصاصی، جدا از قالب و مستقل از بکاپ `wordpress.rar` نگهداری می‌شوند تا
+دو افزونهٔ اختصاصی، جدا از قالب و مستقل از بکاپ `wordpress.zip` نگهداری می‌شوند تا
 با هر به‌روزرسانی سایت از بین نروند. برای نصب، پوشهٔ هر کدام را در
 `wp-content/plugins/` کپی و از پیشخوان فعال کنید.
 
