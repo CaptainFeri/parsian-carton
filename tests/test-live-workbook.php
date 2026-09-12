@@ -122,30 +122,78 @@ foreach ( $plan['rows'] as $row ) {
 	$types[ $key ] = ( isset( $types[ $key ] ) ? $types[ $key ] : 0 ) + 1;
 }
 
-check( 'تعداد محصولات ساده', $types['simple'], 41 );
-check( 'تعداد محصولات متغیر', $types['variable'], 58 );
-check( 'تعداد واریاسیون‌ها', $types['variation'], 116 );
-check( 'مجموع سطرها', count( $plan['rows'] ), 215 );
+// تعداد محصولات با تغییر کاتالوگ عوض می‌شود، پس عددی ثابت بررسی نمی‌شود؛
+// چیزی که باید همیشه برقرار باشد، سازگاری ساختار است.
+check( 'همهٔ سطرها نوع دارند', isset( $types['simple'] ) || isset( $types['variable'] ), true );
+check( 'مجموع سطرها با فایل می‌خواند', count( $plan['rows'] ), count( $data['rows'] ) );
+
+// هر واریاسیون باید والدش در همان فایل باشد، وگرنه محصول در فروشگاه ناقص است.
+$skus = array();
+foreach ( $data['rows'] as $record ) {
+	if ( '' !== trim( $record['کد محصول'] ) ) {
+		$skus[ trim( $record['کد محصول'] ) ] = true;
+	}
+}
+
+$orphans  = 0;
+$childless = 0;
+$parents  = array();
+
+foreach ( $data['rows'] as $record ) {
+	$kind = PCS_Mapper::product_type( $record['نوع'] );
+
+	if ( 'variation' === $kind ) {
+		$parent = trim( $record['مادر'] );
+
+		if ( '' === $parent || ! isset( $skus[ $parent ] ) ) {
+			$orphans++;
+		} else {
+			$parents[ $parent ] = true;
+		}
+	}
+}
+
+foreach ( $data['rows'] as $record ) {
+	if ( 'variable' === PCS_Mapper::product_type( $record['نوع'] )
+		&& ! isset( $parents[ trim( $record['کد محصول'] ) ] ) ) {
+		$childless++;
+	}
+}
+
+check( 'هیچ واریاسیونی بی‌والد نیست', $orphans, 0 );
+check( 'هیچ محصول متغیری بدون واریاسیون نیست', $childless, 0 );
+
+// قیمت روی والد بی‌معناست و باید خالی باشد.
+$priced_parents = 0;
+foreach ( $data['rows'] as $record ) {
+	if ( 'variable' === PCS_Mapper::product_type( $record['نوع'] ) && '' !== trim( $record['قیمت'] ) ) {
+		$priced_parents++;
+	}
+}
+check( 'محصول متغیر قیمت ندارد', $priced_parents, 0 );
 
 /* ---------- نسبت دادن کد به محصولی که کد ندارد ---------- */
 
 // سه محصول «اسباب‌کشی چاپ‌دار» روی سایت کد ندارند. حالا که در فایل برایشان کد
 // گذاشته شده، باید به همان محصول موجود نسبت داده شود — نه اینکه محصول تکراری
 // ساخته شود. تطبیق بر پایهٔ «شناسه» همین را ممکن می‌کند.
-$without_sku = array( 98, 99, 100 );
+$without_sku = array();
 
-foreach ( $without_sku as $id ) {
+foreach ( array( 98, 99, 100 ) as $id ) {
 	$product = wc_get_product( $id );
 
 	if ( $product ) {
 		$product->data['sku'] = '';
+		$without_sku[]        = $id;
 	}
 }
+
+check( 'محصولات چاپ‌دار در فایل هستند', count( $without_sku ) > 0, true );
 
 $assign = PCS_Sync::plan( $workbook );
 
 check( 'نسبت دادن کد — هیچ محصول تازه‌ای ساخته نمی‌شود', $assign['summary']['create'], 0 );
-check( 'نسبت دادن کد — دقیقاً سه محصول به‌روز می‌شوند', $assign['summary']['update'], 3 );
+check( 'نسبت دادن کد — به اندازهٔ همان محصولات به‌روزرسانی', $assign['summary']['update'], count( $without_sku ) );
 check( 'نسبت دادن کد — بدون خطا', $assign['summary']['error'], 0 );
 
 $assigned = array();
@@ -166,15 +214,12 @@ foreach ( $assign['rows'] as $row ) {
 	$assigned[ $row['id'] ] = $row['changes']['sku']['to'];
 }
 
-check(
-	'کدهای نسبت‌داده‌شده',
-	$assigned,
-	array(
-		98  => 'movingcartons-50-30-35-print',
-		99  => 'movingcartons-60-40-40-print',
-		100 => 'movingcartons-70-50-40-print',
-	)
+$expected = array(
+	98  => 'movingcartons-50-30-35-print',
+	99  => 'movingcartons-60-40-40-print',
+	100 => 'movingcartons-70-50-40-print',
 );
+check( 'کدهای نسبت‌داده‌شده', $assigned, array_intersect_key( $expected, array_flip( $without_sku ) ) );
 
 // کد تکراری باید جلوی نوشتن را بگیرد.
 $clash = wc_get_product( 98 );

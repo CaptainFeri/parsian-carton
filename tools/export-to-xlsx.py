@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-"""ساخت فایل اکسل خوانا و قابل ویرایش از خروجی CSV ووکامرس.
+"""ساخت فایل اکسل خوانا و قابل ویرایش از فهرست محصولات.
 
-    python3 tools/export-to-xlsx.py ورودی.csv خروجی.xlsx
+    python3 tools/export-to-xlsx.py ورودی خروجی.xlsx
+
+ورودی می‌تواند خروجی CSV ووکامرس باشد یا یک فایل اکسلِ ساخته‌شده با همین ابزار
+(برای وقتی که سطرهایی را دستی اضافه یا حذف کرده‌اید و می‌خواهید فایل دوباره
+مرتب شود). قالب ورودی از روی سرستون‌ها تشخیص داده می‌شود.
 
 ساختار فایل بر پایهٔ کاری چیده شده که واقعاً انجام می‌شود: ویرایش قیمت. پس
 ستون‌های قیمت و موجودی نزدیک نام محصول‌اند و متن‌های بلند ته جدول رفته‌اند.
@@ -19,7 +23,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-# (سرستون، ستون مبدأ در فایل ووکامرس، پهنا، قفل، توضیح)
+# (سرستون، ستون مبدأ در خروجی ووکامرس، پهنا، قفل، توضیح)
+# سرستون خودِ این ابزار هم به‌عنوان مبدأ پذیرفته می‌شود، پس خروجی دوباره خواندنی است.
 # قفل = ستونی که ساختار محصول به آن وابسته است و نباید ویرایش شود.
 COLUMNS = [
     ("شناسه",          "شناسه",             8,  True,  "شناسهٔ محصول در وردپرس. کلید اصلی تطبیق — هرگز تغییرش ندهید."),
@@ -77,16 +82,69 @@ def repair(text):
     return text.strip()
 
 
-def main(src, dest):
+def read_rows(src):
+    """خواندن ورودی csv یا xlsx به فهرستی از دیکشنری‌ها."""
+    if src.lower().endswith((".xlsx", ".xlsm")):
+        from openpyxl import load_workbook
+
+        book = load_workbook(src, data_only=True)
+        sheet = book["محصولات"] if "محصولات" in book.sheetnames else book.worksheets[0]
+        grid = list(sheet.iter_rows(values_only=True))
+        header = [str(h).strip() if h is not None else "" for h in grid[0]]
+        rows = []
+        for raw in grid[1:]:
+            record = {
+                header[i]: ("" if i >= len(raw) or raw[i] is None else str(raw[i]).strip())
+                for i in range(len(header))
+            }
+            if any(record.values()):
+                rows.append(record)
+        return rows
+
     with io.open(src, encoding="utf-8-sig") as fh:
-        rows = list(csv.DictReader(fh))
+        return list(csv.DictReader(fh))
+
+
+def pick_source(rows, column):
+    """کدام نام ستون در این ورودی وجود دارد: نام ووکامرس یا نام خودِ این ابزار."""
+    name, woo = column[0], column[1]
+    header = rows[0].keys() if rows else []
+
+    if woo in header:
+        return woo
+    if name in header:
+        return name
+    return None
+
+
+def main(src, dest):
+    rows = read_rows(src)
+
+    if not rows:
+        raise SystemExit("ورودی خالی است.")
+
+    # مقادیر فارسی خروجی خودمان باید به مقدار خام ووکامرس برگردند تا دوباره
+    # همان‌طور که باید نوشته شوند.
+    back = {v: k for k, v in TYPE_FA.items()}
+    back_stock = {v: k for k, v in STOCK_FA.items()}
+    back_status = {v: k for k, v in STATUS_FA.items()}
+
+    for record in rows:
+        if "نوع" in record and record["نوع"] in back:
+            record["نوع"] = back[record["نوع"]]
+        if "وضعیت موجودی" in record and record["وضعیت موجودی"] in back_stock:
+            record["وضعیت موجودی"] = back_stock[record["وضعیت موجودی"]]
+        if "وضعیت انتشار" in record and record["وضعیت انتشار"] in back_status:
+            record["وضعیت انتشار"] = back_status[record["وضعیت انتشار"]]
 
     # ستون‌های خالی در کل کاتالوگ حذف می‌شوند، مگر ستون‌های کلیدی و ستون‌هایی که
     # ممکن است بخواهید بعداً پرشان کنید (حراج و موجودی).
     essential = {"شناسه", "نوع", "کد محصول", "نام", "قیمت", "قیمت حراج", "موجودی", "وضعیت موجودی"}
+    sources = {c[0]: pick_source(rows, c) for c in COLUMNS}
     columns = [
         c for c in COLUMNS
-        if c[0] in essential or any((r.get(c[1]) or "").strip() for r in rows)
+        if c[0] in essential
+        or (sources[c[0]] and any((r.get(sources[c[0]]) or "").strip() for r in rows))
     ]
     dropped = [c[0] for c in COLUMNS if c not in columns]
 
@@ -119,11 +177,13 @@ def main(src, dest):
     current = None
 
     for record in rows:
-        kind = (record.get("نوع") or "").strip()
+        kind = (record.get(sources["نوع"]) or "").strip() if sources["نوع"] else ""
         values = []
 
-        for name, source, _, _, _ in columns:
-            value = (record.get(source) or "").strip()
+        for column in columns:
+            name = column[0]
+            source = sources[name]
+            value = (record.get(source) or "").strip() if source else ""
 
             if name == "نوع":
                 value = TYPE_FA.get(value, value)
