@@ -190,10 +190,36 @@ $GLOBALS['pcs_attribute_taxonomies'] = array();
 class Fake_WPDB {
 	public $postmeta = 'wp_postmeta';
 	public $posts    = 'wp_posts';
-	public function prepare( $query, ...$args ) { return $query; }
+	/**
+	 * آرگومان‌های آخرین prepare — جای placeholderهای پرس‌وجو را می‌گیرند.
+	 *
+	 * @var array
+	 */
+	protected $args = array();
+
+	public function prepare( $query, ...$args ) {
+		$this->args = $args;
+		return $query;
+	}
+
 	public function esc_like( $text ) { return $text; }
 	// کتابخانهٔ رسانهٔ شبیه‌سازی‌شده: نگاشت «نام فایل یا نشانی» به شناسهٔ پیوست.
 	public function get_var( $query ) {
+		// جستجوی نام فایل — همان کاری که PCS_Media برای مقدارهای «نام فایل» می‌کند.
+		// بدون این، هر نام فایلی پیدا‌نشده حساب می‌شد و آزمون برای همهٔ محصولات
+		// «تغییر تصویر» می‌دید.
+		if ( false !== strpos( $query, '_wp_attached_file' ) && isset( $this->args[0] ) ) {
+			$needle = basename( (string) $this->args[0] );
+
+			foreach ( array_reverse( $GLOBALS['pcs_attachments'], true ) as $id => $file ) {
+				if ( basename( (string) $file ) === $needle ) {
+					return $id;
+				}
+			}
+
+			return 0;
+		}
+
 		return isset( $GLOBALS['pcs_lookup_result'] ) ? $GLOBALS['pcs_lookup_result'] : 0;
 	}
 }
