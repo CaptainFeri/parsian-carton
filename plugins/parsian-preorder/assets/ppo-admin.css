@@ -1,0 +1,304 @@
+/* کارتابل پیش‌فروش — پیشخوان */
+
+.ppo-wrap {
+	--ppo-line: #e2e8f0;
+	--ppo-muted: #64748b;
+}
+
+.ppo-card {
+	background: #fff;
+	border: 1px solid var(--ppo-line);
+	border-radius: 8px;
+	padding: 16px 20px;
+	margin: 16px 0;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.ppo-card > h2 {
+	margin-top: 0;
+	font-size: 15px;
+}
+
+.ppo-muted,
+.ppo-empty {
+	color: var(--ppo-muted);
+}
+
+.ppo-late {
+	color: #b91c1c;
+	font-weight: 600;
+}
+
+.ppo-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	line-height: 1.8;
+	color: #fff;
+	background: var(--ppo-badge-color, #64748b);
+	white-space: nowrap;
+}
+
+.ppo-flag {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	line-height: 18px;
+	text-align: center;
+	border-radius: 50%;
+	background: #dc2626;
+	color: #fff;
+	font-weight: 700;
+	font-size: 12px;
+}
+
+/* ------------------------------ داشبورد ------------------------------ */
+
+.ppo-kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+	margin: 16px 0;
+}
+
+.ppo-kpi {
+	display: block;
+	background: #fff;
+	border: 1px solid var(--ppo-line);
+	border-radius: 8px;
+	padding: 14px 16px;
+	text-decoration: none;
+	color: inherit;
+}
+
+a.ppo-kpi:hover {
+	border-color: #2563eb;
+}
+
+.ppo-kpi-warn {
+	border-color: #fca5a5;
+	background: #fef2f2;
+}
+
+.ppo-kpi-number {
+	display: block;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.4;
+}
+
+.ppo-kpi-label {
+	display: block;
+	font-size: 12px;
+	color: var(--ppo-muted);
+}
+
+.ppo-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+	gap: 16px;
+}
+
+.ppo-grid .ppo-card {
+	margin: 0 0 16px;
+}
+
+.ppo-pipeline {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ppo-pipeline li {
+	margin-bottom: 10px;
+}
+
+.ppo-pipeline a {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	text-decoration: none;
+	color: inherit;
+}
+
+.ppo-pipeline-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex: none;
+}
+
+.ppo-pipeline-label {
+	flex: 1;
+}
+
+.ppo-pipeline-count {
+	font-weight: 700;
+}
+
+.ppo-pipeline-bar {
+	height: 4px;
+	background: #f1f5f9;
+	border-radius: 999px;
+	margin-top: 4px;
+	overflow: hidden;
+}
+
+.ppo-pipeline-bar span {
+	display: block;
+	height: 100%;
+}
+
+.ppo-chart {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	height: 150px;
+}
+
+.ppo-chart-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	height: 100%;
+}
+
+.ppo-chart-bar {
+	display: block;
+	width: 100%;
+	background: #2563eb;
+	border-radius: 3px 3px 0 0;
+	min-height: 3px;
+}
+
+.ppo-chart-col small {
+	font-size: 10px;
+	color: var(--ppo-muted);
+	margin-top: 4px;
+}
+
+/* ---------------------------- صفحهٔ درخواست ---------------------------- */
+
+.ppo-single-grid {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 16px;
+	align-items: start;
+}
+
+@media (max-width: 960px) {
+	.ppo-single-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.ppo-facts th {
+	width: 160px;
+	text-align: start;
+}
+
+.ppo-single-side label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.ppo-single-side input[type="text"],
+.ppo-single-side input[type="number"],
+.ppo-single-side select,
+.ppo-single-side textarea {
+	width: 100%;
+}
+
+.ppo-single-side .ltr {
+	direction: ltr;
+	text-align: left;
+}
+
+.ppo-note-form {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin-bottom: 16px;
+}
+
+.ppo-note-form textarea {
+	flex: 1;
+}
+
+.ppo-timeline {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-inline-start: 2px solid var(--ppo-line);
+	padding-inline-start: 16px;
+}
+
+.ppo-timeline li {
+	position: relative;
+	display: flex;
+	gap: 8px;
+	padding-bottom: 14px;
+}
+
+.ppo-timeline-icon {
+	flex: none;
+	width: 22px;
+	height: 22px;
+	line-height: 22px;
+	text-align: center;
+	border-radius: 50%;
+	background: #f1f5f9;
+	font-size: 12px;
+}
+
+.ppo-timeline-note .ppo-timeline-icon {
+	background: #dbeafe;
+}
+
+.ppo-timeline-status .ppo-timeline-icon {
+	background: #ede9fe;
+}
+
+.ppo-timeline-order .ppo-timeline-icon {
+	background: #dcfce7;
+}
+
+.ppo-timeline-body p {
+	margin: 0 0 2px;
+}
+
+.ppo-timeline-body small {
+	color: var(--ppo-muted);
+}
+
+/* ----------------------------- محصولات ----------------------------- */
+
+.ppo-capacity {
+	height: 5px;
+	background: #f1f5f9;
+	border-radius: 999px;
+	margin-top: 4px;
+	overflow: hidden;
+	max-width: 120px;
+}
+
+.ppo-capacity span {
+	display: block;
+	height: 100%;
+	background: #2563eb;
+}
+
+.ppo-export-form {
+	display: inline-block;
+	margin-inline-start: 6px;
+}
+
+.ppo-inline-check {
+	display: inline-block;
+	margin: 0 8px;
+	line-height: 30px;
+}

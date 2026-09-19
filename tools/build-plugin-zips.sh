@@ -21,7 +21,7 @@ done
 #    بازنویسی نمی‌کند.
 staging="$(mktemp -d)"
 mkdir -p "$staging/wp-content/plugins"
-cp -r plugins/parsian-shop-filters plugins/parsian-catalog-sync "$staging/wp-content/plugins/"
+cp -r plugins/*/ "$staging/wp-content/plugins/"
 ( cd "$staging" && zip -rq "$OLDPWD/dist/deploy-plugins.zip" wp-content -x '*.DS_Store' '*/.*' )
 rm -rf "$staging"
 echo "ساخته شد: dist/deploy-plugins.zip  (در ریشهٔ وب اکسترکت شود)"

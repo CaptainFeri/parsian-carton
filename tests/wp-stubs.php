@@ -7,6 +7,8 @@
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'HOUR_IN_SECONDS', 3600 );
 define( 'MINUTE_IN_SECONDS', 60 );
+define( 'DAY_IN_SECONDS', 86400 );
+define( 'ENT_QUOTES_COMPAT', ENT_QUOTES );
 
 class WP_Error {
 	protected $code;
@@ -44,6 +46,16 @@ function add_filter( $tag, $callback, $priority = 10, $accepted = 1 ) {
 function remove_all_filters( $tag ) { unset( $GLOBALS['pcs_filters'][ $tag ] ); }
 function esc_html( $v ) { return htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ); }
 function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
+function sanitize_textarea_field( $v ) { return trim( strip_tags( (string) $v ) ); }
+function sanitize_email( $v ) { return trim( (string) $v ); }
+function is_email( $v ) { return (bool) filter_var( (string) $v, FILTER_VALIDATE_EMAIL ); }
+function sanitize_hex_color( $v ) { return preg_match( '/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', (string) $v ) ? (string) $v : null; }
+function wp_strip_all_tags( $v ) { return trim( strip_tags( (string) $v ) ); }
+function esc_attr( $v ) { return htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ); }
+function _n_noop( $single, $plural, $domain = '' ) { return array( 'singular' => $single, 'plural' => $plural ); }
+function register_post_status( $status, $args = array() ) { $GLOBALS['pcs_post_statuses'][ $status ] = $args; return true; }
+function register_post_type( $type, $args = array() ) { $GLOBALS['pcs_post_types'][ $type ] = $args; return true; }
+function wc_price( $amount ) { return number_format( (float) $amount ) . ' تومان'; }
 function sanitize_key( $v ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $v ) ); }
 function sanitize_title( $v ) { return trim( preg_replace( '/[^\p{L}\p{N}]+/u', '-', (string) $v ), '-' ); }
 function esc_url_raw( $v ) { return (string) $v; }
