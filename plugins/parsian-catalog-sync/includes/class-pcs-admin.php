@@ -46,6 +46,7 @@ class PCS_Admin {
 		add_action( 'admin_post_pcs_preview', array( $this, 'handle_preview' ) );
 		add_action( 'admin_post_pcs_apply', array( $this, 'handle_apply' ) );
 		add_action( 'admin_post_pcs_settings', array( $this, 'handle_settings' ) );
+		add_action( 'admin_post_pcs_export', array( $this, 'handle_export' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -159,6 +160,39 @@ class PCS_Admin {
 				admin_url( 'edit.php' )
 			)
 		);
+		exit;
+	}
+
+	/**
+	 * ساخت و فرستادن فایل خروجی.
+	 */
+	public function handle_export() {
+		$this->guard( 'pcs_export' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- در guard() بررسی شد.
+		$args = array(
+			'status'       => isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : 'any',
+			'category'     => isset( $_POST['category'] ) ? (int) $_POST['category'] : 0,
+			'variations'   => isset( $_POST['variations'] ) ? 1 : 0,
+			'descriptions' => isset( $_POST['descriptions'] ) ? 1 : 0,
+			'images'       => isset( $_POST['images'] ) ? 1 : 0,
+			'attributes'   => isset( $_POST['attributes'] ) ? 1 : 0,
+			'extras'       => isset( $_POST['extras'] ) ? 1 : 0,
+			'custom'       => isset( $_POST['custom'] ) ? 1 : 0,
+			'empty'        => isset( $_POST['empty'] ) ? 1 : 0,
+		);
+		// phpcs:enable
+
+		// خروجی بزرگ نباید وسط کار با محدودیت زمان قطع شود.
+		if ( function_exists( 'wc_set_time_limit' ) ) {
+			wc_set_time_limit( 0 );
+		}
+
+		while ( ob_get_level() ) {
+			ob_end_clean();
+		}
+
+		PCS_Exporter::stream( $args );
 		exit;
 	}
 
@@ -300,6 +334,7 @@ class PCS_Admin {
 		if ( is_array( $plan ) ) {
 			$this->render_preview( $plan, $token );
 		} else {
+			$this->render_export_form();
 			$this->render_upload_form();
 			$this->render_settings_form();
 			$this->render_history();
@@ -356,6 +391,121 @@ class PCS_Admin {
 	}
 
 	/**
+	 * فرم گرفتن خروجی.
+	 *
+	 * جریان کار کامل کاتالوگ از همین‌جا شروع می‌شود: خروجی بگیرید، در اکسل ویرایش
+	 * کنید، و همان فایل را در بخش بعدی برگردانید.
+	 */
+	protected function render_export_form() {
+		$counts = wp_count_posts( 'product' );
+		$total  = ( isset( $counts->publish ) ? (int) $counts->publish : 0 ) + ( isset( $counts->draft ) ? (int) $counts->draft : 0 ) + ( isset( $counts->private ) ? (int) $counts->private : 0 );
+		?>
+		<div class="pcs-card">
+			<h2><?php esc_html_e( '۱) خروجی گرفتن از محصولات', 'parsian-catalog-sync' ); ?></h2>
+			<p class="pcs-muted">
+				<?php
+				printf(
+					/* translators: %s: تعداد محصولات. */
+					esc_html__( 'یک فایل CSV از %s محصول فروشگاه می‌سازد. فایل را در اکسل باز کنید، قیمت و موجودی را اصلاح کنید و در بخش بعدی همین صفحه برگردانید. سرستون‌ها همان‌هایی هستند که این افزونه می‌شناسد، پس فایل بدون هیچ دست‌کاری قابل برگرداندن است.', 'parsian-catalog-sync' ),
+					'<strong>' . esc_html( pcs_digits( $total ) ) . '</strong>'
+				);
+				?>
+			</p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<?php wp_nonce_field( 'pcs_export' ); ?>
+				<input type="hidden" name="action" value="pcs_export">
+
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="pcs-export-status"><?php esc_html_e( 'کدام محصولات', 'parsian-catalog-sync' ); ?></label></th>
+						<td>
+							<?php
+							$statuses = array(
+								'any'     => __( 'همه (منتشرشده، پیش‌نویس و خصوصی)', 'parsian-catalog-sync' ),
+								'publish' => __( 'فقط منتشرشده‌ها', 'parsian-catalog-sync' ),
+								'draft'   => __( 'فقط پیش‌نویس‌ها', 'parsian-catalog-sync' ),
+								'private' => __( 'فقط خصوصی‌ها', 'parsian-catalog-sync' ),
+							);
+							?>
+							<select id="pcs-export-status" name="status">
+								<?php foreach ( $statuses as $value => $label ) : ?>
+									<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+
+							<?php
+							wp_dropdown_categories(
+								array(
+									'taxonomy'          => 'product_cat',
+									'name'              => 'category',
+									'id'                => 'pcs-export-category',
+									'show_option_all'   => __( 'همهٔ دسته‌بندی‌ها', 'parsian-catalog-sync' ),
+									'hierarchical'      => true,
+									'hide_empty'        => false,
+									'orderby'           => 'name',
+									'value_field'       => 'term_id',
+								)
+							);
+							?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'ستون‌ها', 'parsian-catalog-sync' ); ?></th>
+						<td>
+							<label style="display:block;margin-bottom:4px;">
+								<input type="checkbox" name="variations" value="1" checked>
+								<?php esc_html_e( 'واریاسیون‌ها هم بیایند (هر واریاسیون یک سطر، زیر محصول متغیرش)', 'parsian-catalog-sync' ); ?>
+							</label>
+							<label style="display:block;margin-bottom:4px;">
+								<input type="checkbox" name="descriptions" value="1" checked>
+								<?php esc_html_e( 'توضیحات و توضیح کوتاه', 'parsian-catalog-sync' ); ?>
+							</label>
+							<label style="display:block;margin-bottom:4px;">
+								<input type="checkbox" name="images" value="1" checked>
+								<?php esc_html_e( 'تصاویر (نشانی تصویر شاخص و گالری)', 'parsian-catalog-sync' ); ?>
+							</label>
+							<label style="display:block;margin-bottom:4px;">
+								<input type="checkbox" name="attributes" value="1" checked>
+								<?php esc_html_e( 'صفت‌ها (سایز، تعداد لایه، نوع چاپ…)', 'parsian-catalog-sync' ); ?>
+							</label>
+							<?php if ( PCS_Fields::all() ) : ?>
+								<label style="display:block;margin-bottom:4px;">
+									<input type="checkbox" name="custom" value="1" checked>
+									<?php
+									printf(
+										/* translators: %s: فهرست ستون‌ها. */
+										esc_html__( 'ستون‌های افزونه‌ها: %s', 'parsian-catalog-sync' ),
+										esc_html( implode( '، ', wp_list_pluck( PCS_Fields::all(), 'label' ) ) )
+									);
+									?>
+								</label>
+							<?php endif; ?>
+							<label style="display:block;">
+								<input type="checkbox" name="extras" value="1">
+								<?php esc_html_e( 'ستون‌های کم‌کاربرد: برچسب، ویژه، ترتیب، وزن و ابعاد', 'parsian-catalog-sync' ); ?>
+							</label>
+						</td>
+					</tr>
+				</table>
+
+				<p>
+					<button type="submit" class="button button-primary">
+						<?php esc_html_e( 'دریافت فایل CSV', 'parsian-catalog-sync' ); ?>
+					</button>
+					<button type="submit" name="empty" value="1" class="button">
+						<?php esc_html_e( 'دریافت قالب خالی', 'parsian-catalog-sync' ); ?>
+					</button>
+				</p>
+				<p class="description">
+					<?php esc_html_e( 'قیمت‌ها با همان واحدی نوشته می‌شوند که در تنظیمات پایین همین صفحه انتخاب کرده‌اید. ستون «شناسه» کلید تطبیق است؛ پاکش نکنید.', 'parsian-catalog-sync' ); ?>
+				</p>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
 	 * فرم بارگذاری فایل.
 	 */
 	protected function render_upload_form() {
@@ -363,7 +513,7 @@ class PCS_Admin {
 		$stored   = $settings->get( 'source' );
 		?>
 		<div class="pcs-card">
-			<h2><?php esc_html_e( '۱) فایل را انتخاب کنید', 'parsian-catalog-sync' ); ?></h2>
+			<h2><?php esc_html_e( '۲) فایل ویرایش‌شده را برگردانید', 'parsian-catalog-sync' ); ?></h2>
 			<p class="pcs-muted">
 				<?php esc_html_e( 'ابتدا پیش‌نمایش تغییرات را می‌بینید؛ تا وقتی دکمهٔ «اعمال» را نزنید هیچ‌چیز در فروشگاه تغییر نمی‌کند.', 'parsian-catalog-sync' ); ?>
 			</p>
@@ -426,7 +576,7 @@ class PCS_Admin {
 		);
 		?>
 		<div class="pcs-card">
-			<h2><?php esc_html_e( '۲) پیش‌نمایش تغییرات', 'parsian-catalog-sync' ); ?></h2>
+			<h2><?php esc_html_e( '۳) پیش‌نمایش تغییرات', 'parsian-catalog-sync' ); ?></h2>
 
 			<p class="pcs-muted">
 				<?php

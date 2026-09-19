@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       پارسیان کارتن — همگام‌سازی کاتالوگ با اکسل
  * Plugin URI:        https://parsiancarton.com/
- * Description:       فایل اکسل را به‌عنوان مرجع محصولات، قیمت‌ها، موجودی و تصاویر قرار می‌دهد. هر بار فایل را اصلاح می‌کنید، پیش‌نمایش تغییرات را می‌بینید و با یک کلیک روی فروشگاه اعمال می‌شود. امکان همگام‌سازی خودکار از یک نشانی (مثلاً گوگل‌شیت) هم دارد.
- * Version:           1.0.0
+ * Description:       چرخهٔ کامل کاتالوگ با یک فایل: گرفتن خروجی CSV/اکسل از محصولات فروشگاه، ویرایش آن، و برگرداندنش با پیش‌نمایش تغییرات پیش از اعمال. همگام‌سازی خودکار از یک نشانی (مثلاً گوگل‌شیت) هم دارد.
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Parsian Carton
@@ -15,18 +15,20 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PCS_VERSION', '1.0.0' );
+define( 'PCS_VERSION', '1.1.0' );
 define( 'PCS_FILE', __FILE__ );
 define( 'PCS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PCS_URL', plugin_dir_url( __FILE__ ) );
 
 require_once PCS_PATH . 'includes/helpers.php';
+require_once PCS_PATH . 'includes/class-pcs-fields.php';
 require_once PCS_PATH . 'includes/class-pcs-spreadsheet.php';
 require_once PCS_PATH . 'includes/class-pcs-mapper.php';
 require_once PCS_PATH . 'includes/class-pcs-content.php';
 require_once PCS_PATH . 'includes/class-pcs-media.php';
 require_once PCS_PATH . 'includes/class-pcs-settings.php';
 require_once PCS_PATH . 'includes/class-pcs-sync.php';
+require_once PCS_PATH . 'includes/class-pcs-exporter.php';
 require_once PCS_PATH . 'includes/class-pcs-scheduler.php';
 require_once PCS_PATH . 'includes/class-pcs-attribute-migrator.php';
 require_once PCS_PATH . 'includes/class-pcs-admin.php';

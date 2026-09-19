@@ -24,10 +24,24 @@ class WP_Error {
 
 function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
 function __( $text, $domain = '' ) { return $text; }
-function apply_filters( $tag, $value ) { return $value; }
-function do_action( $tag ) {}
+/**
+ * فیلترهای ثبت‌شده — برای آزمودن نقاط توسعهٔ افزونه (مثل ستون‌های سفارشی).
+ */
+$GLOBALS['pcs_filters'] = array();
+
+function apply_filters( $tag, $value, ...$args ) {
+	foreach ( isset( $GLOBALS['pcs_filters'][ $tag ] ) ? $GLOBALS['pcs_filters'][ $tag ] : array() as $callback ) {
+		$value = call_user_func_array( $callback, array_merge( array( $value ), $args ) );
+	}
+	return $value;
+}
+function do_action( $tag, ...$args ) {}
 function add_action( ...$args ) {}
-function add_filter( ...$args ) {}
+function add_filter( $tag, $callback, $priority = 10, $accepted = 1 ) {
+	$GLOBALS['pcs_filters'][ $tag ][] = $callback;
+	return true;
+}
+function remove_all_filters( $tag ) { unset( $GLOBALS['pcs_filters'][ $tag ] ); }
 function esc_html( $v ) { return htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ); }
 function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
 function sanitize_key( $v ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $v ) ); }
@@ -54,6 +68,7 @@ class Fake_Product {
 	public $data = array();
 	public $terms = array( 'product_cat' => array(), 'product_tag' => array() );
 	public $attributes = array();
+	public $meta = array();
 	public $saved = 0;
 
 	public function __construct( $id = 0, $data = array() ) {
@@ -100,6 +115,11 @@ class Fake_Product {
 		}
 		throw new Exception( "متد ناشناخته: {$name}" );
 	}
+
+	public function get_parent_id() { return isset( $this->data['parent_id'] ) ? (int) $this->data['parent_id'] : 0; }
+	public function get_meta( $key, $single = true ) { return isset( $this->meta[ $key ] ) ? $this->meta[ $key ] : ''; }
+	public function update_meta_data( $key, $value ) { $this->meta[ $key ] = $value; }
+	public function delete_meta_data( $key ) { unset( $this->meta[ $key ] ); }
 
 	public function set_image_id( $v ) { $this->data['image_id'] = $v; }
 	public function set_gallery_image_ids( $v ) { $this->data['gallery'] = $v; }
@@ -170,9 +190,58 @@ function get_posts( $args ) {
 	return $ids;
 }
 
+/**
+ * ثبت یک ترم با والد اختیاری — برای آزمون دسته‌بندی‌های تودرتو.
+ *
+ * از همان سیاههٔ ترم‌های پایین فایل استفاده می‌کند (کلید = شناسهٔ ترم).
+ */
+function pcs_test_add_term( $taxonomy, $name, $parent_name = '' ) {
+	$parent = 0;
+
+	if ( '' !== $parent_name ) {
+		$found = get_term_by( 'name', $parent_name, $taxonomy );
+		if ( $found ) { $parent = (int) $found->term_id; }
+	}
+
+	$id   = ++$GLOBALS['pcs_next_term'];
+	$term = new Fake_Term( $id, $name, sanitize_title( $name ), $taxonomy );
+	$term->parent = $parent;
+
+	$GLOBALS['pcs_terms'][ $id ] = $term;
+
+	return $term;
+}
+
 function wp_get_object_terms( $post_id, $taxonomy, $args = array() ) {
 	$product = wc_get_product( $post_id );
-	return $product && isset( $product->terms[ $taxonomy ] ) ? $product->terms[ $taxonomy ] : array();
+	$names   = ( $product && isset( $product->terms[ $taxonomy ] ) ) ? $product->terms[ $taxonomy ] : array();
+
+	if ( isset( $args['fields'] ) && 'names' === $args['fields'] ) {
+		return $names;
+	}
+
+	$objects = array();
+
+	foreach ( $names as $name ) {
+		$found = get_term_by( 'name', $name, $taxonomy );
+		// ترمی که در آزمون ثبت نشده، یک ترم مسطح بدون والد فرض می‌شود.
+		$objects[] = $found ? $found : new Fake_Term( crc32( $taxonomy . $name ) % 10000, $name, sanitize_title( $name ), $taxonomy );
+	}
+
+	return $objects;
+}
+
+function wp_list_pluck( $list, $field ) {
+	$out = array();
+	foreach ( (array) $list as $item ) {
+		$item = (array) $item;
+		if ( isset( $item[ $field ] ) ) { $out[] = $item[ $field ]; }
+	}
+	return $out;
+}
+
+function wp_get_attachment_url( $id ) {
+	return isset( $GLOBALS['pcs_attachments'][ (int) $id ] ) ? $GLOBALS['pcs_attachments'][ (int) $id ] : false;
 }
 
 function wc_get_attribute_taxonomies() { return $GLOBALS['pcs_attribute_taxonomies'] ?? array(); }
@@ -278,6 +347,7 @@ class WC_Product_Attribute {
 /** ترم شبیه‌سازی‌شده. */
 class Fake_Term {
 	public $term_id, $name, $slug, $taxonomy;
+	public $parent = 0;
 	public function __construct( $id, $name, $slug, $taxonomy ) {
 		$this->term_id = $id; $this->name = $name; $this->slug = $slug; $this->taxonomy = $taxonomy;
 	}
@@ -338,4 +408,32 @@ function wp_set_object_terms( $object_id, $terms, $taxonomy, $append = false ) {
 }
 
 function wc_delete_product_transients() {}
-function wc_get_product_terms( $id, $taxonomy, $args = array() ) { return array(); }
+function wc_set_time_limit( $limit = 0 ) {}
+$GLOBALS['pcs_post_meta'] = array();
+function update_post_meta( $post_id, $key, $value ) { $GLOBALS['pcs_post_meta'][ (int) $post_id ][ $key ] = $value; return true; }
+function get_post_meta( $post_id, $key = '', $single = false ) {
+	if ( '' === $key ) { return isset( $GLOBALS['pcs_post_meta'][ (int) $post_id ] ) ? $GLOBALS['pcs_post_meta'][ (int) $post_id ] : array(); }
+	$value = isset( $GLOBALS['pcs_post_meta'][ (int) $post_id ][ $key ] ) ? $GLOBALS['pcs_post_meta'][ (int) $post_id ][ $key ] : '';
+	return $single ? $value : array( $value );
+}
+function wp_defer_term_counting( $defer ) {}
+function wp_suspend_cache_invalidation( $suspend ) {}
+function wp_update_post( $args ) { return isset( $args['ID'] ) ? (int) $args['ID'] : 0; }
+function wp_trash_post( $id ) { return true; }
+function wc_get_product_terms( $id, $taxonomy, $args = array() ) {
+	// ترم‌های صفت سراسری که هنگام ذخیرهٔ محصول به آن وصل شده‌اند.
+	$names = isset( $GLOBALS['pcs_object_terms'][ $id ][ $taxonomy ] ) ? $GLOBALS['pcs_object_terms'][ $id ][ $taxonomy ] : array();
+
+	if ( isset( $args['fields'] ) && 'names' === $args['fields'] ) {
+		return $names;
+	}
+
+	$objects = array();
+
+	foreach ( $names as $name ) {
+		$found     = get_term_by( 'name', $name, $taxonomy );
+		$objects[] = $found ? $found : new Fake_Term( crc32( $taxonomy . $name ) % 10000, $name, sanitize_title( $name ), $taxonomy );
+	}
+
+	return $objects;
+}

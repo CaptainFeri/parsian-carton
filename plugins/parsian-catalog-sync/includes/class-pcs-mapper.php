@@ -57,6 +57,13 @@ class PCS_Mapper {
 			'menu_order'        => array( 'ترتیب', 'اولویت', 'موقعیت', 'order', 'position' ),
 		);
 
+		// ستون‌های افزونه‌های دیگر (مثل پیش‌فروش) — برچسب خودشان هم یک نگارش مجاز است.
+		foreach ( PCS_Fields::all() as $key => $field ) {
+			$names = array_merge( array( $field['label'] ), (array) $field['aliases'] );
+
+			$map[ PCS_Fields::field( $key ) ] = array_values( array_unique( array_filter( $names ) ) );
+		}
+
 		/**
 		 * تغییر نام‌های پذیرفته‌شدهٔ ستون‌ها.
 		 *

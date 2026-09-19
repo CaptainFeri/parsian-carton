@@ -253,6 +253,25 @@ class PCS_Sync {
 				continue;
 			}
 
+			// ستون افزونه‌های دیگر (مثل پیش‌فروش) — تعریفش می‌گوید چطور خوانده شود.
+			if ( PCS_Fields::is_custom( $field ) ) {
+				$definition = PCS_Fields::get( $field );
+
+				if ( ! $definition || ! PCS_Fields::applies_to( $definition, $row['type'] ) ) {
+					continue;
+				}
+
+				$value = PCS_Fields::to_store( $definition, $raw );
+
+				if ( is_wp_error( $value ) ) {
+					$row['errors'][] = $value->get_error_message();
+					continue;
+				}
+
+				$prepared[ $field ] = $value;
+				continue;
+			}
+
 			switch ( $field ) {
 				// کلیدهای شناسایی و ساختار — نوشتنی نیستند و نباید در تفاوت‌ها بیایند.
 				case 'id':
@@ -508,6 +527,12 @@ class PCS_Sync {
 	 * @return string
 	 */
 	protected static function current_value( $product, $field ) {
+		if ( PCS_Fields::is_custom( $field ) ) {
+			$definition = PCS_Fields::get( $field );
+
+			return $definition ? PCS_Fields::comparable( $definition, PCS_Fields::read( $product, $definition ) ) : '';
+		}
+
 		switch ( $field ) {
 			case 'categories':
 				return self::term_names( $product->get_id(), 'product_cat' );
@@ -570,6 +595,28 @@ class PCS_Sync {
 	 * @return string
 	 */
 	protected static function comparable( $field, $value ) {
+		if ( PCS_Fields::is_custom( $field ) ) {
+			$definition = PCS_Fields::get( $field );
+
+			return $definition ? PCS_Fields::comparable( $definition, $value ) : (string) $value;
+		}
+
+		// نام دسته می‌تواند مسیر کامل باشد («کارتن اسباب‌کشی>۵ لایه») ولی مقدار فعلی
+		// محصول فقط نام برگ است؛ مقایسه روی نام برگ انجام می‌شود تا فایلی که مسیر
+		// کامل دارد، بی‌دلیل «تغییر» گزارش نشود.
+		if ( in_array( $field, array( 'categories', 'tags' ), true ) ) {
+			$leaves = array();
+
+			foreach ( (array) $value as $item ) {
+				$parts    = explode( '>', (string) $item );
+				$leaves[] = trim( (string) end( $parts ) );
+			}
+
+			sort( $leaves );
+
+			return implode( '، ', $leaves );
+		}
+
 		if ( 'image' === $field ) {
 			// مقدار فایل به شناسهٔ پیوست ترجمه می‌شود تا با مقدار فعلی محصول قابل
 			// مقایسه باشد؛ وگرنه نشانی با شناسه مقایسه می‌شد و هر بار برای همهٔ
@@ -736,6 +783,12 @@ class PCS_Sync {
 				__( 'ویژگی %s', 'parsian-catalog-sync' ),
 				substr( $field, strlen( 'attribute:' ) )
 			);
+		}
+
+		if ( PCS_Fields::is_custom( $field ) ) {
+			$definition = PCS_Fields::get( $field );
+
+			return $definition ? $definition['label'] : $field;
 		}
 
 		$labels = array(
@@ -974,6 +1027,18 @@ class PCS_Sync {
 
 			if ( $gallery ) {
 				$product->set_gallery_image_ids( $gallery );
+			}
+		}
+
+		foreach ( $values as $field => $value ) {
+			if ( ! PCS_Fields::is_custom( $field ) ) {
+				continue;
+			}
+
+			$definition = PCS_Fields::get( $field );
+
+			if ( $definition ) {
+				$product->update_meta_data( $definition['meta_key'], $value );
 			}
 		}
 

@@ -10,7 +10,7 @@
 require __DIR__ . '/wp-stubs.php';
 
 $base = __DIR__ . '/../plugins/parsian-catalog-sync/includes/';
-foreach ( array( 'helpers', 'class-pcs-content', 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
+foreach ( array( 'helpers', 'class-pcs-fields', 'class-pcs-content', 'class-pcs-spreadsheet', 'class-pcs-mapper', 'class-pcs-media', 'class-pcs-settings', 'class-pcs-sync' ) as $class ) {
 	require $base . $class . '.php';
 }
 
