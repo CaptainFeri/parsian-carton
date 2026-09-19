@@ -145,10 +145,17 @@ class PPO_Settings {
 			}
 		}
 
-		$flags = array( 'ask_company', 'ask_city', 'ask_note', 'show_countdown', 'show_capacity', 'myaccount_tab', 'sms_enabled', 'email_enabled' );
+		// تیک خاموش اصلاً در POST نمی‌آید، پس در ارسال فرم «نبودِ کلید» یعنی خاموش.
+		// ولی در ذخیرهٔ برنامه‌ای (مثل انتقال داده‌های نسخهٔ قدیمی) نبودِ کلید باید
+		// یعنی «دست نزن»، وگرنه یک ذخیرهٔ جزئی همهٔ تیک‌ها را خاموش می‌کند. فیلد
+		// پنهان ppo_form این دو حالت را از هم جدا می‌کند.
+		$from_form = ! empty( $values['ppo_form'] );
+		$flags     = array( 'ask_company', 'ask_city', 'ask_note', 'show_countdown', 'show_capacity', 'myaccount_tab', 'sms_enabled', 'email_enabled' );
 
 		foreach ( $flags as $key ) {
-			$clean[ $key ] = empty( $values[ $key ] ) ? 0 : 1;
+			if ( $from_form || array_key_exists( $key, $values ) ) {
+				$clean[ $key ] = empty( $values[ $key ] ) ? 0 : 1;
+			}
 		}
 
 		$texts = array( 'badge_text', 'button_text', 'customer_template', 'admin_template', 'sms_api_key' );

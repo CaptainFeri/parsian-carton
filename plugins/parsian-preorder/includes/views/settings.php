@@ -18,6 +18,8 @@ $templates = (array) $settings->get( 'status_templates' );
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'ppo_settings' ); ?>
 		<input type="hidden" name="action" value="ppo_settings">
+		<?php // به ذخیره‌کننده می‌گوید این یک ارسال کامل فرم است، پس تیک‌های نیامده خاموش‌اند. ?>
+		<input type="hidden" name="ppo_form" value="1">
 
 		<div class="ppo-card">
 			<h2><?php esc_html_e( 'گردش کار', 'parsian-preorder' ); ?></h2>

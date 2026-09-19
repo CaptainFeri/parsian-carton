@@ -37,8 +37,32 @@ function apply_filters( $tag, $value, ...$args ) {
 	}
 	return $value;
 }
-function do_action( $tag, ...$args ) {}
-function add_action( ...$args ) {}
+$GLOBALS['pcs_actions'] = array();
+
+function add_action( $tag, $callback = null, $priority = 10, $accepted = 1 ) {
+	if ( $callback ) {
+		$GLOBALS['pcs_actions'][ $tag ][] = $callback;
+	}
+	return true;
+}
+
+function do_action( $tag, ...$args ) {
+	foreach ( isset( $GLOBALS['pcs_actions'][ $tag ] ) ? $GLOBALS['pcs_actions'][ $tag ] : array() as $callback ) {
+		call_user_func_array( $callback, $args );
+	}
+}
+
+function remove_action( $tag, $callback, $priority = 10 ) {
+	if ( empty( $GLOBALS['pcs_actions'][ $tag ] ) ) {
+		return false;
+	}
+	foreach ( $GLOBALS['pcs_actions'][ $tag ] as $index => $registered ) {
+		if ( $registered === $callback ) {
+			unset( $GLOBALS['pcs_actions'][ $tag ][ $index ] );
+		}
+	}
+	return true;
+}
 function add_filter( $tag, $callback, $priority = 10, $accepted = 1 ) {
 	$GLOBALS['pcs_filters'][ $tag ][] = $callback;
 	return true;
@@ -59,7 +83,13 @@ function wc_price( $amount ) { return number_format( (float) $amount ) . ' تو�
 function sanitize_key( $v ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $v ) ); }
 function sanitize_title( $v ) { return trim( preg_replace( '/[^\p{L}\p{N}]+/u', '-', (string) $v ), '-' ); }
 function esc_url_raw( $v ) { return (string) $v; }
-function current_time( $type ) { return '2026-09-11 12:00:00'; }
+function current_time( $type, $gmt = 0 ) {
+	// مثل وردپرس: 'timestamp' و 'U' عدد می‌دهند، بقیه رشتهٔ تاریخ.
+	if ( 'timestamp' === $type || 'U' === $type ) {
+		return time();
+	}
+	return '2026-09-11 12:00:00';
+}
 function get_current_user_id() { return 1; }
 function wp_normalize_path( $p ) { return str_replace( '\\', '/', (string) $p ); }
 function wp_basename( $p ) { return basename( (string) $p ); }
@@ -75,7 +105,13 @@ function wp_parse_args( $args, $defaults ) { return array_merge( $defaults, (arr
 
 /* --------------------------- محصولات شبیه‌سازی‌شده --------------------------- */
 
-class Fake_Product {
+/**
+ * پایهٔ محصول — کد افزونه‌ها با is_a( $x, 'WC_Product' ) بررسی می‌کند، پس
+ * محصول شبیه‌سازی‌شده باید واقعاً از همین کلاس ارث ببرد.
+ */
+class WC_Product {}
+
+class Fake_Product extends WC_Product {
 	public $id;
 	public $data = array();
 	public $terms = array( 'product_cat' => array(), 'product_tag' => array() );
@@ -115,6 +151,10 @@ class Fake_Product {
 	public function get_width( $ctx = 'view' ) { return $this->data['width']; }
 	public function get_height( $ctx = 'view' ) { return $this->data['height']; }
 	public function get_menu_order() { return $this->data['menu_order']; }
+	public function get_price( $ctx = 'view' ) {
+		$sale = $this->data['sale_price'];
+		return ( '' !== $sale && null !== $sale ) ? $sale : $this->data['regular_price'];
+	}
 	public function get_attributes() { return $this->attributes; }
 	public function get_type() { return isset( $this->data['type'] ) ? $this->data['type'] : 'simple'; }
 	public function is_type( $type ) { return $this->get_type() === $type; }
@@ -430,8 +470,144 @@ function get_post_meta( $post_id, $key = '', $single = false ) {
 }
 function wp_defer_term_counting( $defer ) {}
 function wp_suspend_cache_invalidation( $suspend ) {}
-function wp_update_post( $args ) { return isset( $args['ID'] ) ? (int) $args['ID'] : 0; }
 function wp_trash_post( $id ) { return true; }
+
+/* ------------------------- انبارهٔ نوشته‌های ساده ------------------------- */
+
+/**
+ * نوشته‌هایی که نوع «محصول» نیستند (مثل درخواست پیش‌فروش) اینجا نگه داشته می‌شوند.
+ */
+$GLOBALS['pcs_posts']    = array();
+$GLOBALS['pcs_next_post'] = 2000;
+
+function wp_insert_post( $args, $error = false ) {
+	if ( ! empty( $args['ID'] ) && isset( $GLOBALS['pcs_posts'][ (int) $args['ID'] ] ) ) {
+		$post = $GLOBALS['pcs_posts'][ (int) $args['ID'] ];
+
+		foreach ( $args as $key => $value ) {
+			$post->$key = $value;
+		}
+
+		return (int) $post->ID;
+	}
+
+	$id   = ++$GLOBALS['pcs_next_post'];
+	$post = (object) array_merge(
+		array(
+			'ID'          => $id,
+			'post_type'   => 'post',
+			'post_status' => 'publish',
+			'post_title'  => '',
+			'post_date'   => gmdate( 'Y-m-d H:i:s' ),
+		),
+		$args
+	);
+
+	$post->ID = $id;
+
+	$GLOBALS['pcs_posts'][ $id ] = $post;
+
+	return $id;
+}
+
+function wp_update_post( $args ) {
+	return wp_insert_post( $args );
+}
+
+function get_post( $id ) {
+	$id = (int) $id;
+
+	return isset( $GLOBALS['pcs_posts'][ $id ] ) ? $GLOBALS['pcs_posts'][ $id ] : null;
+}
+
+function wp_delete_post( $id, $force = false ) {
+	unset( $GLOBALS['pcs_posts'][ (int) $id ] );
+
+	return true;
+}
+
+/* ----------------------------- دیدگاه‌ها ----------------------------- */
+
+$GLOBALS['pcs_comments']    = array();
+$GLOBALS['pcs_next_comment'] = 300;
+
+function wp_insert_comment( $args ) {
+	$id = ++$GLOBALS['pcs_next_comment'];
+
+	$GLOBALS['pcs_comments'][ $id ] = (object) array_merge(
+		array(
+			'comment_ID'      => $id,
+			'comment_post_ID' => 0,
+			'comment_author'  => '',
+			'comment_content' => '',
+			'comment_type'    => '',
+			'comment_date'    => gmdate( 'Y-m-d H:i:s' ),
+		),
+		$args
+	);
+
+	return $id;
+}
+
+function add_comment_meta( $id, $key, $value ) {
+	$GLOBALS['pcs_comment_meta'][ (int) $id ][ $key ] = $value;
+
+	return true;
+}
+
+function get_comment_meta( $id, $key = '', $single = false ) {
+	$value = isset( $GLOBALS['pcs_comment_meta'][ (int) $id ][ $key ] ) ? $GLOBALS['pcs_comment_meta'][ (int) $id ][ $key ] : '';
+
+	return $single ? $value : array( $value );
+}
+
+function get_comments( $args = array() ) {
+	$found = array();
+
+	foreach ( $GLOBALS['pcs_comments'] as $comment ) {
+		if ( isset( $args['post_id'] ) && (int) $comment->comment_post_ID !== (int) $args['post_id'] ) {
+			continue;
+		}
+
+		if ( isset( $args['type'] ) && $comment->comment_type !== $args['type'] ) {
+			continue;
+		}
+
+		$found[] = $comment;
+	}
+
+	return array_reverse( $found );
+}
+
+function remove_filter( $tag, $callback, $priority = 10 ) {
+	if ( empty( $GLOBALS['pcs_filters'][ $tag ] ) ) {
+		return false;
+	}
+
+	foreach ( $GLOBALS['pcs_filters'][ $tag ] as $index => $registered ) {
+		if ( $registered === $callback ) {
+			unset( $GLOBALS['pcs_filters'][ $tag ][ $index ] );
+		}
+	}
+
+	return true;
+}
+
+function get_userdata( $id ) { return false; }
+function get_role( $name ) { return null; }
+function delete_option( $key ) { unset( $GLOBALS['pcs_options'][ $key ] ); return true; }
+function admin_url( $path = '' ) { return 'https://example.test/wp-admin/' . $path; }
+function add_query_arg( $args, $url = '' ) { return $url . '?' . http_build_query( (array) $args ); }
+function get_option_bloginfo() {}
+function get_bloginfo( $key = '' ) { return 'نمونه'; }
+function wp_specialchars_decode( $text, $quotes = null ) { return $text; }
+function get_theme_mod( $key, $default = '' ) { return $default; }
+function wp_mail( $to, $subject, $message ) { $GLOBALS['pcs_mail'][] = compact( 'to', 'subject', 'message' ); return true; }
+function wp_remote_post( $url, $args = array() ) { return new WP_Error( 'offline', 'بدون شبکه' ); }
+function wp_remote_retrieve_body( $response ) { return ''; }
+function current_user_can( $capability ) { return true; }
+function wc_format_decimal( $value ) { return (string) $value; }
+function wc_get_order( $id ) { return false; }
 function wc_get_product_terms( $id, $taxonomy, $args = array() ) {
 	// ترم‌های صفت سراسری که هنگام ذخیرهٔ محصول به آن وصل شده‌اند.
 	$names = isset( $GLOBALS['pcs_object_terms'][ $id ][ $taxonomy ] ) ? $GLOBALS['pcs_object_terms'][ $id ][ $taxonomy ] : array();

@@ -385,3 +385,75 @@ function ppo_price( $amount ) {
 
 	return ppo_number( $amount );
 }
+
+/* --------------------- سازگاری با نسخهٔ قدیمی افزونه --------------------- */
+
+/*
+ * قالب سایت ممکن است این دو تابع را صدا بزند (نسخهٔ ۱ افزونه آن‌ها را تعریف
+ * می‌کرد). اگر حذفشان کنیم، قالبی که هنوز صدایشان می‌زند با خطای مرگبار روبه‌رو
+ * می‌شود؛ پس همان نام‌ها می‌مانند و کارشان را به نسخهٔ تازه می‌سپارند.
+ */
+
+if ( ! function_exists( 'parsian_preorder_is_product' ) ) {
+	/**
+	 * آیا محصول پیش‌فروش است؟
+	 *
+	 * @param WC_Product|int $product محصول.
+	 * @return bool
+	 */
+	function parsian_preorder_is_product( $product ) {
+		return PPO_Product::is_preorder( $product );
+	}
+}
+
+if ( ! function_exists( 'parsian_preorder_lead_days' ) ) {
+	/**
+	 * زمان آماده‌سازی (روز کاری).
+	 *
+	 * @param WC_Product|int $product محصول.
+	 * @return int
+	 */
+	function parsian_preorder_lead_days( $product ) {
+		return PPO_Product::lead_days( $product );
+	}
+}
+
+if ( ! function_exists( 'parsian_preorder_render_card_badge' ) ) {
+	/**
+	 * نشان «پیش‌فروش» روی کارت محصول.
+	 *
+	 * @param WC_Product $product محصول.
+	 * @return string HTML.
+	 */
+	function parsian_preorder_render_card_badge( $product ) {
+		return PPO_Frontend::card_badge( $product );
+	}
+}
+
+if ( ! function_exists( 'parsian_preorder_render_card_button' ) ) {
+	/**
+	 * دکمهٔ کارت محصول پیش‌فروش.
+	 *
+	 * @param WC_Product $product محصول.
+	 * @return string HTML.
+	 */
+	function parsian_preorder_render_card_button( $product ) {
+		if ( ! PPO_Product::is_preorder( $product ) ) {
+			return '';
+		}
+
+		return PPO_Frontend::loop_button( '', $product );
+	}
+}
+
+if ( ! function_exists( 'parsian_preorder_fa_digits' ) ) {
+	/**
+	 * تبدیل ارقام به فارسی.
+	 *
+	 * @param string|int $text ورودی.
+	 * @return string
+	 */
+	function parsian_preorder_fa_digits( $text ) {
+		return ppo_digits( $text );
+	}
+}
