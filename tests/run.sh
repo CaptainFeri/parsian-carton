@@ -13,7 +13,7 @@ while IFS= read -r file; do
 		php -l "$file"
 		status=1
 	fi
-done < <(find plugins tests -name '*.php')
+done < <(find plugins themes tests -name '*.php')
 [ "$status" -eq 0 ] && echo "همهٔ فایل‌های PHP سالم‌اند."
 
 for test in tests/test-*.php; do

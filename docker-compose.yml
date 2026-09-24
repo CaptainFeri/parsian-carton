@@ -49,6 +49,8 @@ services:
     volumes:
       - ./wordpress:/var/www/html
       - ./setup:/setup:ro
+      - ./themes/cartonpak:/var/www/html/wp-content/themes/cartonpak
+      - ./plugins/parsian-wholesale:/var/www/html/wp-content/plugins/parsian-wholesale
 
   wpcli:
     build:
@@ -71,6 +73,8 @@ services:
     volumes:
       - ./wordpress:/var/www/html
       - ./setup:/setup:ro
+      - ./themes/cartonpak:/var/www/html/wp-content/themes/cartonpak
+      - ./plugins/parsian-wholesale:/var/www/html/wp-content/plugins/parsian-wholesale
     profiles:
       - cli
 
