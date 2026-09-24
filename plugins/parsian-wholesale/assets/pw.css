@@ -1,0 +1,178 @@
+/* ============================================================
+   فروش عمده — اجزای صفحهٔ محصول و فرم استعلام
+   رنگ‌ها از توکن‌های قالب (--c-*) خوانده می‌شوند.
+   ============================================================ */
+
+/* ---------- جدول قیمت پلکانی ---------- */
+.pw-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 22px;
+}
+.pw-tiers-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-ink, #1E1A15);
+}
+.pw-tiers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pw-tier {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 2px solid var(--c-border-soft, #E4D8C6);
+  border-radius: var(--r-btn, 12px);
+  background: var(--c-surface, #FFFDF8);
+  color: var(--c-ink, #1E1A15);
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.pw-tier-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pw-tier-price { font-weight: 500; }
+.pw-tier-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-accent, #8A5429);
+}
+.pw-tier.is-active {
+  border-color: var(--c-accent, #8A5429);
+  background: var(--c-accent-soft, #F1E3CF);
+}
+.pw-tier.is-active .pw-tier-range,
+.pw-tier.is-active .pw-tier-price { font-weight: 700; }
+.pw-tier-price .woocommerce-Price-amount { font-weight: inherit; }
+
+/* ---------- چاپ لوگو ---------- */
+.pw-logo-print {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin: 0 0 22px;
+}
+.pw-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--c-ink, #1E1A15);
+  cursor: pointer;
+}
+.pw-check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--c-accent, #8A5429);
+}
+.pw-note {
+  margin: 0;
+  padding-inline-start: 30px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--c-muted, #5E554A);
+}
+
+/* ---------- فرم استعلام قیمت ---------- */
+.pw-quote-form { width: 100%; }
+.pw-quote-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+.pw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.pw-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-text-2, #3D362E);
+}
+.pw-field input,
+.pw-field select {
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--c-border-input, #CDBFAA);
+  border-radius: var(--r-btn, 12px);
+  background: #FFFFFF;
+  color: var(--c-ink, #1E1A15);
+  font: inherit;
+  font-size: 15px;
+}
+.pw-field input:focus,
+.pw-field select:focus {
+  outline: 2px solid var(--c-accent, #8A5429);
+  outline-offset: 1px;
+  border-color: var(--c-accent, #8A5429);
+}
+.pw-field input::placeholder { color: #7A6F62; }
+.pw-quote-submit {
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-btn, 12px);
+  background: var(--c-accent, #8A5429);
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pw-quote-submit:hover { filter: brightness(.92); }
+.pw-quote-submit:focus-visible {
+  outline: 2px solid var(--c-ink, #1E1A15);
+  outline-offset: 2px;
+}
+.pw-quote-notice {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--r-btn, 12px);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.pw-quote-notice.is-success { background: #E3EFE3; color: #1F4228; }
+.pw-quote-notice.is-error { background: #F6E0DA; color: #7A2616; }
+.pw-quote-product {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: var(--c-text-2, #3D362E);
+}
+.pw-quote-product a {
+  font-weight: 700;
+  color: var(--c-accent, #8A5429);
+}
+.pw-hp {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .pw-quote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .pw-quote-grid { grid-template-columns: minmax(0, 1fr); }
+  .pw-tier { padding: 12px 14px; }
+}
