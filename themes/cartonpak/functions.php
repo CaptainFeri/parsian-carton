@@ -9,7 +9,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CARTONPAK_VERSION', '1.0.0' );
+define( 'CARTONPAK_VERSION', '2.0.0' );
+
+require_once get_template_directory() . '/inc/icons.php';
+require_once get_template_directory() . '/inc/template-tags.php';
+if ( class_exists( 'WooCommerce' ) ) {
+	require_once get_template_directory() . '/inc/woocommerce.php';
+}
 
 /* ---------------------------------- تنظیمات اولیه ---------------------------------- */
 
@@ -49,18 +55,14 @@ add_action( 'after_setup_theme', 'cartonpak_content_width', 0 );
 /* ---------------------------------- اسکریپت‌ها و استایل‌ها ---------------------------------- */
 
 function cartonpak_assets() {
-	wp_enqueue_style(
-		'vazirmatn',
-		'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css',
-		array(),
-		'33.003'
-	);
+	/* فونت Vazirmatn روی همین هاست است (assets/fonts) و در main.css با @font-face تعریف می‌شود. */
 	wp_enqueue_style(
 		'cartonpak-main',
 		get_template_directory_uri() . '/assets/css/main.css',
-		array( 'vazirmatn' ),
+		array(),
 		CARTONPAK_VERSION
 	);
+	wp_add_inline_style( 'cartonpak-main', cartonpak_accent_css() );
 	wp_enqueue_script(
 		'cartonpak-main',
 		get_template_directory_uri() . '/assets/js/main.js',
@@ -69,9 +71,7 @@ function cartonpak_assets() {
 		true
 	);
 	wp_localize_script( 'cartonpak-main', 'cartonpakData', array(
-		'ajaxUrl'   => class_exists( 'WooCommerce' ) ? WC_AJAX::get_endpoint( 'add_to_cart' ) : home_url( '/' ),
-		'cartUrl'   => class_exists( 'WooCommerce' ) ? wc_get_cart_url() : home_url( '/' ),
-		'cartCount' => class_exists( 'WooCommerce' ) && WC()->cart ? cartonpak_digits( WC()->cart->get_cart_contents_count() ) : '۰',
+		'cartUrl' => class_exists( 'WooCommerce' ) ? wc_get_cart_url() : home_url( '/' ),
 	) );
 
 	if ( class_exists( 'WooCommerce' ) ) {
@@ -80,6 +80,47 @@ function cartonpak_assets() {
 	}
 }
 add_action( 'wp_enqueue_scripts', 'cartonpak_assets' );
+
+/**
+ * پیش‌بارگذاری دو وزن پرکاربرد فونت تا متن فارسی بدون پرش نمایش داده شود.
+ */
+function cartonpak_preload_fonts() {
+	foreach ( array( 'Regular', 'Black' ) as $weight ) {
+		printf(
+			'<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n",
+			esc_url( get_template_directory_uri() . '/assets/fonts/Vazirmatn-FD-' . $weight . '.woff2' )
+		);
+	}
+}
+add_action( 'wp_head', 'cartonpak_preload_fonts', 2 );
+
+/**
+ * رنگ‌های اصلی قابل انتخاب (همه با متن سفید خوانا هستند).
+ *
+ * @return array<string, string>
+ */
+function cartonpak_accent_choices() {
+	return array(
+		'#8A5429' => 'کرافت (پیش‌فرض)',
+		'#1F4E79' => 'سرمه‌ای',
+		'#2F5D3A' => 'سبز',
+		'#1E1A15' => 'مشکی',
+	);
+}
+
+/**
+ * متغیر رنگ اصلی بر اساس انتخاب سفارشی‌سازی.
+ *
+ * @return string
+ */
+function cartonpak_accent_css() {
+	$accent = get_theme_mod( 'cartonpak_accent', '#8A5429' );
+	if ( ! array_key_exists( $accent, cartonpak_accent_choices() ) || '#8A5429' === $accent ) {
+		return '';
+	}
+
+	return ':root{--c-accent:' . $accent . ';}';
+}
 
 function cartonpak_widgets() {
 	register_sidebar( array(
@@ -95,23 +136,32 @@ add_action( 'widgets_init', 'cartonpak_widgets' );
 
 /* ---------------------------------- سفارشی‌سازی (تلفن، شبکه‌های اجتماعی) ---------------------------------- */
 
+/**
+ * فیلدهای متنی «اطلاعات فروشگاه» و مقدار پیش‌فرضشان.
+ *
+ * @return array<string, array{label: string, default: string}>
+ */
+function cartonpak_contact_fields() {
+	return array(
+		'cartonpak_phone'       => array( 'label' => 'تلفن شرکت', 'default' => '۰۹۹۱۲۷۴۸۸۴۸' ),
+		'cartonpak_mobile'      => array( 'label' => 'موبایل / ثبت سفارش', 'default' => '۰۹۱۲۰۸۱۰۷۶۹' ),
+		'cartonpak_support'     => array( 'label' => 'پیگیری و پشتیبانی سفارشات (نوار بالا)', 'default' => '۰۹۲۱۵۳۱۶۲۳۱' ),
+		'cartonpak_instagram'   => array( 'label' => 'اینستاگرام', 'default' => 'https://instagram.com/kartonsazi_parsian' ),
+		'cartonpak_telegram'    => array( 'label' => 'تلگرام', 'default' => '' ),
+		'cartonpak_whatsapp'    => array( 'label' => 'پیام‌رسان‌ها (روبیکا، بله، ایتا)', 'default' => 'tel:09912748848' ),
+		'cartonpak_address'     => array( 'label' => 'آدرس کارخانه', 'default' => 'سمنان، شهرک صنعتی شرق، بلوار کارفرمایان جنوبی، کارفرمایان چهارم، پلاک ۲۰۰' ),
+		'cartonpak_hours'       => array( 'label' => 'ساعت کاری (خالی = نمایش داده نشود)', 'default' => '' ),
+		'cartonpak_topbar_text' => array( 'label' => 'متن نوار بالا', 'default' => 'ارسال به سراسر ایران · قیمت ویژهٔ خرید عمده' ),
+	);
+}
+
 function cartonpak_customize( $wp_customize ) {
 	$wp_customize->add_section( 'cartonpak_contact', array(
-		'title'    => __( 'اطلاعات تماس کارتن‌پک', 'cartonpak' ),
+		'title'    => __( 'اطلاعات فروشگاه', 'cartonpak' ),
 		'priority' => 30,
 	) );
 
-	$fields = array(
-		'cartonpak_phone'      => array( 'label' => 'تلفن شرکت', 'default' => '۰۹۹۱۲۷۴۸۸۴۸' ),
-		'cartonpak_mobile'     => array( 'label' => 'موبایل / ثبت سفارش', 'default' => '۰۹۱۲۰۸۱۰۷۶۹' ),
-		'cartonpak_support'    => array( 'label' => 'پیگیری و پشتیبانی سفارشات', 'default' => '۰۹۲۱۵۳۱۶۲۳۱' ),
-		'cartonpak_instagram'  => array( 'label' => 'اینستاگرام', 'default' => 'https://instagram.com/kartonsazi_parsian' ),
-		'cartonpak_telegram'   => array( 'label' => 'تلگرام', 'default' => '' ),
-		'cartonpak_whatsapp'   => array( 'label' => 'پیام‌رسان‌ها (روبیکا، بله، ایتا)', 'default' => 'tel:09912748848' ),
-		'cartonpak_address'    => array( 'label' => 'آدرس کارخانه', 'default' => 'سمنان، شهرک صنعتی شرق، بلوار کارفرمایان جنوبی، کارفرمایان چهارم، پلاک ۲۰۰' ),
-	);
-
-	foreach ( $fields as $id => $args ) {
+	foreach ( cartonpak_contact_fields() as $id => $args ) {
 		$wp_customize->add_setting( $id, array(
 			'default'           => $args['default'],
 			'sanitize_callback' => 'sanitize_text_field',
@@ -122,10 +172,79 @@ function cartonpak_customize( $wp_customize ) {
 			'type'    => 'text',
 		) );
 	}
+
+	/* کد نماد اعتماد و نشان ساماندهی — همان کدی که سامانه‌ها می‌دهند. */
+	$badges = array(
+		'cartonpak_trust_enamad'    => 'کد نماد اعتماد الکترونیکی (اینماد)',
+		'cartonpak_trust_samandehi' => 'کد نشان ساماندهی',
+	);
+	foreach ( $badges as $id => $label ) {
+		$wp_customize->add_setting( $id, array(
+			'default'           => '',
+			'sanitize_callback' => 'cartonpak_sanitize_badge_code',
+		) );
+		$wp_customize->add_control( $id, array(
+			'label'       => $label,
+			'description' => 'کد HTML را از پنل سامانه کپی کنید. تا خالی است، جایی در فوتر برایش نمایش داده نمی‌شود.',
+			'section'     => 'cartonpak_contact',
+			'type'        => 'textarea',
+		) );
+	}
+
+	$wp_customize->add_section( 'cartonpak_design', array(
+		'title'    => __( 'ظاهر فروشگاه', 'cartonpak' ),
+		'priority' => 31,
+	) );
+
+	$wp_customize->add_setting( 'cartonpak_accent', array(
+		'default'           => '#8A5429',
+		'sanitize_callback' => function ( $value ) {
+			return array_key_exists( $value, cartonpak_accent_choices() ) ? $value : '#8A5429';
+		},
+	) );
+	$wp_customize->add_control( 'cartonpak_accent', array(
+		'label'   => 'رنگ اصلی',
+		'section' => 'cartonpak_design',
+		'type'    => 'radio',
+		'choices' => cartonpak_accent_choices(),
+	) );
+
+	$wp_customize->add_setting( 'cartonpak_hero_image', array(
+		'default'           => 0,
+		'sanitize_callback' => 'absint',
+	) );
+	$wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'cartonpak_hero_image', array(
+		'label'       => 'عکس بخش معرفی صفحهٔ اصلی',
+		'description' => 'عکس واقعی کارتن‌ها با پس‌زمینهٔ ساده، حداقل ۱۲۰۰×۱۰۰۰ پیکسل. تا انتخاب نشود، تصویر ساده‌شدهٔ کارتن نمایش داده می‌شود.',
+		'section'     => 'cartonpak_design',
+		'mime_type'   => 'image',
+	) ) );
 }
 add_action( 'customize_register', 'cartonpak_customize' );
 
+/**
+ * پاک‌سازی کد نشان‌ها: مدیرانی که اجازهٔ HTML آزاد دارند کد کامل (با onclick
+ * ساماندهی) را ذخیره می‌کنند؛ بقیه فقط HTML مجاز نوشته‌ها.
+ *
+ * @param string $value کد.
+ * @return string
+ */
+function cartonpak_sanitize_badge_code( $value ) {
+	return current_user_can( 'unfiltered_html' ) ? trim( (string) $value ) : wp_kses_post( $value );
+}
+
+/**
+ * خواندن یک تنظیم سفارشی‌سازی با پیش‌فرض ثبت‌شده‌اش.
+ *
+ * @param string $key      کلید.
+ * @param string $fallback جایگزین.
+ * @return string
+ */
 function cartonpak_option( $key, $fallback = '' ) {
+	if ( '' === $fallback ) {
+		$fields   = cartonpak_contact_fields();
+		$fallback = isset( $fields[ $key ] ) ? $fields[ $key ]['default'] : '';
+	}
 	$value = get_theme_mod( $key, $fallback );
 	return $value ? $value : $fallback;
 }
@@ -180,6 +299,16 @@ add_filter( 'woocommerce_product_variation_get_price', 'cartonpak_rial_to_toman'
 add_filter( 'woocommerce_product_variation_get_regular_price', 'cartonpak_rial_to_toman', 20, 2 );
 add_filter( 'woocommerce_product_variation_get_sale_price', 'cartonpak_rial_to_toman', 20, 2 );
 
+/* بازهٔ قیمت محصولات متغیر («۲۵٬۰۰۰ تا ۳۸٬۰۰۰») از قیمت‌های خام کش‌شده ساخته
+   می‌شود و از فیلترهای بالا رد نمی‌شد؛ همین تبدیل روی آن هم اعمال می‌شود. */
+add_filter( 'woocommerce_variation_prices_price', 'cartonpak_rial_to_toman', 20 );
+add_filter( 'woocommerce_variation_prices_regular_price', 'cartonpak_rial_to_toman', 20 );
+add_filter( 'woocommerce_variation_prices_sale_price', 'cartonpak_rial_to_toman', 20 );
+add_filter( 'woocommerce_get_variation_prices_hash', function ( $hash ) {
+	$hash[] = 'cartonpak-toman';
+	return $hash;
+} );
+
 /* وردپرس برای تصاویر SVG ابعاد را ۱×۱ برمی‌گرداند که باعث نامرئی شدن تصویر محصول می‌شود؛
    ابعاد واقعی از فایل SVG خوانده و به متادیتای پیوست اضافه می‌شود. */
 function cartonpak_svg_dimensions( $data, $attachment_id ) {
@@ -208,13 +337,18 @@ function cartonpak_svg_dimensions( $data, $attachment_id ) {
 }
 add_filter( 'wp_get_attachment_metadata', 'cartonpak_svg_dimensions', 10, 2 );
 
-/* آپدیت شمارنده سبد خرید در هدر */
+/* شمارندهٔ سبد خرید در هدر (با به‌روزرسانی آژاکسی) */
+function cartonpak_cart_count_html() {
+	$count = class_exists( 'WooCommerce' ) && WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+	return sprintf(
+		'<span class="cart-count" data-count="%1$s"><span class="screen-reader-text">، تعداد کالا: </span>%2$s</span>',
+		esc_attr( $count ),
+		esc_html( cartonpak_digits( $count ) )
+	);
+}
+
 function cartonpak_cart_fragments( $fragments ) {
-	$count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
-	ob_start(); ?>
-	<span class="cart-count" data-count="<?php echo esc_attr( $count ); ?>"><?php echo esc_html( cartonpak_digits( $count ) ); ?></span>
-	<?php
-	$fragments['.cart-count'] = ob_get_clean();
+	$fragments['.cart-count'] = cartonpak_cart_count_html();
 	return $fragments;
 }
 add_filter( 'woocommerce_add_to_cart_fragments', 'cartonpak_cart_fragments' );
@@ -509,11 +643,6 @@ function cartonpak_wc_add_to_cart_text() {
 	return 'افزودن به سبد خرید';
 }
 add_filter( 'woocommerce_product_add_to_cart_text', 'cartonpak_wc_add_to_cart_text' );
-
-function cartonpak_wc_before_single_product_title() {
-	echo '<span class="product-badge">محصول پارسیان کارتن</span>';
-}
-add_action( 'woocommerce_before_single_product_summary', 'cartonpak_wc_before_single_product_title', 5 );
 
 function cartonpak_wc_related_products_args( $args ) {
 	$args['posts_per_page'] = 4;
