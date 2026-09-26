@@ -101,7 +101,16 @@ function psf_is_filterable_archive() {
 		return false;
 	}
 
-	$is_archive = is_shop() || is_product_taxonomy();
+	// نتیجهٔ جستجوی محصول هم یک بایگانی محصول است و باید فیلتر بگیرد؛ بدون این،
+	// کاربری که از کادر جستجوی هدر آمده، پنل را نمی‌بیند.
+	$is_search = is_search() && 'product' === get_query_var( 'post_type' );
+
+	$is_archive = is_shop() || is_product_taxonomy() || $is_search;
+
+	// وقتی پنل با شورت‌کد جایی گذاشته شده باشد، همان‌جا هم فیلترپذیر است.
+	if ( ! $is_archive && ! empty( $GLOBALS['psf_shortcode_context'] ) ) {
+		$is_archive = true;
+	}
 
 	/**
 	 * تعیین اینکه پنل فیلتر در صفحهٔ جاری نمایش داده شود یا نه.

@@ -3,7 +3,7 @@
  * Plugin Name:       پارسیان کارتن — فیلتر و جستجوی فروشگاه
  * Plugin URI:        https://parsiancarton.com/
  * Description:       پنل فیلتر و ابزار جستجو برای صفحهٔ فروشگاه و بایگانی دسته‌بندی محصولات ووکامرس (دسته، قیمت، ویژگی‌ها، موجودی، حراج) به‌همراه جستجوی زنده و به‌روزرسانی آژاکسی شبکهٔ محصولات.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Parsian Carton
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PSF_VERSION', '1.0.0' );
+define( 'PSF_VERSION', '1.1.0' );
 define( 'PSF_FILE', __FILE__ );
 define( 'PSF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PSF_URL', plugin_dir_url( __FILE__ ) );
@@ -25,6 +25,7 @@ require_once PSF_PATH . 'includes/class-psf-settings.php';
 require_once PSF_PATH . 'includes/class-psf-query.php';
 require_once PSF_PATH . 'includes/class-psf-render.php';
 require_once PSF_PATH . 'includes/class-psf-ajax.php';
+require_once PSF_PATH . 'includes/class-psf-status.php';
 
 /**
  * راه‌اندازی افزونه — فقط وقتی ووکامرس فعال است.

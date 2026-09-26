@@ -178,6 +178,8 @@ class PSF_Settings {
 			<h1><?php esc_html_e( 'فیلترهای فروشگاه', 'parsian-shop-filters' ); ?></h1>
 			<p><?php esc_html_e( 'این تنظیمات روی صفحهٔ فروشگاه و بایگانی دسته‌بندی/برچسب محصولات اعمال می‌شود.', 'parsian-shop-filters' ); ?></p>
 
+			<?php PSF_Status::render(); ?>
+
 			<form method="post" action="options.php">
 				<?php settings_fields( 'psf_settings_group' ); ?>
 

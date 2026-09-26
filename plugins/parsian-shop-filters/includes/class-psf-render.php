@@ -46,6 +46,7 @@ class PSF_Render {
 	 */
 	protected function __construct() {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), 20 );
+		add_shortcode( 'parsian_filters', array( $this, 'shortcode' ) );
 		add_action( 'woocommerce_before_shop_loop', array( $this, 'render' ), 15 );
 
 		// قالب ووکامرس `woocommerce_before_shop_loop` را فقط وقتی صدا می‌زند که
@@ -90,6 +91,27 @@ class PSF_Render {
 				),
 			)
 		);
+	}
+
+	/**
+	 * شورت‌کد `[parsian_filters]` — برای قالب‌هایی که قلاب استاندارد ووکامرس را
+	 * برداشته‌اند، یا برگه‌های سفارشی که خودشان فهرست محصول می‌سازند.
+	 *
+	 * @return string
+	 */
+	public function shortcode() {
+		// بدون این پرچم، psf_is_filterable_archive() روی یک برگهٔ معمولی false
+		// می‌دهد و هم پنل و هم استایلش کنار گذاشته می‌شوند.
+		$GLOBALS['psf_shortcode_context'] = true;
+
+		$this->enqueue();
+
+		ob_start();
+		$this->render( true );
+
+		unset( $GLOBALS['psf_shortcode_context'] );
+
+		return (string) ob_get_clean();
 	}
 
 	/* --------------------------------- داده‌ها --------------------------------- */
@@ -389,8 +411,8 @@ class PSF_Render {
 	/**
 	 * نمایش کل پنل فیلتر.
 	 */
-	public function render() {
-		if ( ! psf_is_filterable_archive() || $this->rendered ) {
+	public function render( $force = false ) {
+		if ( ( ! $force && ! psf_is_filterable_archive() ) || $this->rendered ) {
 			return;
 		}
 

@@ -591,3 +591,33 @@
 
   .psf-apply { flex: 1 1 auto; }
 }
+
+/* ============================================================
+   بازنگری موبایل — ۱۴۰۵
+   اندازه‌گیری روی صفحهٔ ۳۹۰ پیکسلی: چک‌باکس‌ها ۱۷×۱۷ بودند و راهنمای قیمت
+   ۱۱٫۵ پیکسل. هر دو زیر حد خوانایی و لمس‌پذیری‌اند.
+   ============================================================ */
+
+@media (max-width: 782px) {
+  .psf-price-hint,
+  .psf-count,
+  .psf-range-label,
+  .psf-price span,
+  .psf-chip { font-size: 12px; }
+
+  /* چک‌باکس بزرگ‌تر، و ردیفِ دورش انگشت‌خور. */
+  .psf-option { padding-block: 10px; gap: 10px; }
+  .psf-option input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
+  .psf-option label,
+  label.psf-option { min-height: 44px; display: flex; align-items: center; }
+
+  .psf-close { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .psf-toggle,
+  .psf-apply,
+  .psf-reset { min-height: 44px; }
+
+  .psf-price-inputs input { min-height: 44px; font-size: 16px; }
+
+  /* پنل کشویی خودش اسکرول بخورد، نه کل صفحه. */
+  .psf-panel.is-open { max-height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+}
