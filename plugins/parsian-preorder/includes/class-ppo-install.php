@@ -28,6 +28,11 @@ class PPO_Install {
 	const MIGRATED_OPTION = 'ppo_legacy_migrated';
 
 	/**
+	 * پرچم «قوانین بازنویسی نشانی باید تازه شوند».
+	 */
+	const FLUSH_OPTION = 'ppo_flush_rules';
+
+	/**
 	 * تعداد درخواستی که در هر بار انتقال پردازش می‌شود.
 	 */
 	const BATCH = 500;
@@ -74,13 +79,33 @@ class PPO_Install {
 			self::add_capabilities();
 			self::migrate_options();
 
+			// وقتی فایل‌های افزونه روی نسخهٔ فعالِ قبلی اکسترکت می‌شوند،
+			// وردپرس قلاب فعال‌سازی را دوباره اجرا نمی‌کند؛ پس نقطهٔ پایانی
+			// «پیش‌فروش‌های من» در حساب کاربری قانون بازنویسی نمی‌گیرد و ۴۰۴
+			// می‌دهد. اینجا فقط پرچم می‌گذاریم — خودِ تازه‌سازی باید بعد از
+			// ثبت نقطهٔ پایانی (روی init) انجام شود.
+			update_option( self::FLUSH_OPTION, 1 );
 			update_option( self::VERSION_OPTION, PPO_VERSION );
 		}
+
+		add_action( 'wp_loaded', array( __CLASS__, 'maybe_flush_rules' ) );
 
 		// انتقال وضعیت‌ها دسته‌ای است؛ تا وقتی تمام نشده، هر بار یک دسته جلو می‌رود.
 		if ( ! get_option( self::MIGRATED_OPTION ) ) {
 			self::migrate_statuses();
 		}
+	}
+
+	/**
+	 * تازه‌سازی قوانین بازنویسی، یک بار پس از هر ارتقا.
+	 */
+	public static function maybe_flush_rules() {
+		if ( ! get_option( self::FLUSH_OPTION ) ) {
+			return;
+		}
+
+		delete_option( self::FLUSH_OPTION );
+		flush_rewrite_rules( false );
 	}
 
 	/**
