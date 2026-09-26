@@ -16,6 +16,8 @@ THEME_DIR="theme/cartonpak"
 CSS="$THEME_DIR/assets/css/main.css"
 START="PARSIAN-MOBILE-PATCH:START"
 END="PARSIAN-MOBILE-PATCH:END"
+MANIFEST=".parsian-patches"
+CSS_REL="assets/css/main.css"
 
 if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
 	echo "استفاده: $0 <مسیر فایل zip قالب>" >&2
@@ -79,15 +81,46 @@ else
 fi
 
 # ---------- ۴) جایگزینی و سوار کردن دوبارهٔ بلوک ----------
+# فهرست فایل‌های تغییرداده‌شده مالِ ماست و در zip بالادست نیست؛ کنار می‌گذاریم.
+KEPT_MANIFEST=""
+if [ -f "$THEME_DIR/$MANIFEST" ]; then
+	KEPT_MANIFEST="$(mktemp)"
+	cp "$THEME_DIR/$MANIFEST" "$KEPT_MANIFEST"
+fi
+
+# کدام فایلِ فهرست‌شده را نسخهٔ تازه عوض کرده؟ پیش از پاک کردن بسنجیم.
+TOUCHED="$(mktemp)"
+if [ -n "$KEPT_MANIFEST" ]; then
+	while IFS="$(printf '\t')" read -r rel note; do
+		case "$rel" in ''|\#*) continue ;; esac
+		[ -f "$THEME_DIR/$rel" ] || continue
+		if ! cmp -s "$THEME_DIR/$rel" "$SRC/$rel" 2>/dev/null; then
+			printf '%s\t%s\n' "$rel" "$note" >> "$TOUCHED"
+		fi
+	done < "$KEPT_MANIFEST"
+fi
+
 rm -rf "${THEME_DIR:?}"
 cp -r "$SRC" "$THEME_DIR"
+
+if [ -n "$KEPT_MANIFEST" ]; then
+	cp "$KEPT_MANIFEST" "$THEME_DIR/$MANIFEST"
+	chmod 644 "$THEME_DIR/$MANIFEST"   # mktemp مجوز 600 می‌دهد
+fi
 
 if [ -s "$PATCH" ]; then
 	if grep -q "$START" "$CSS"; then
 		echo
 		echo "هشدار: نسخهٔ تازه خودش بلوک نشانه‌دار دارد؛ بلوک قبلی دوباره اضافه نشد."
 	else
-		printf '\n' >> "$CSS"
+		# قالب با پایان خط CRLF می‌آید. اگر جداکنندهٔ LF بگذاریم، فایل مخلوط
+		# می‌شود و دیف بعدی کل فایل را تغییرکرده نشان می‌دهد. پس از خود فایل
+		# می‌پرسیم چه پایان خطی دارد.
+		if head -c 8000 "$CSS" | grep -q $'\r'; then
+			printf '\r\n' >> "$CSS"
+		else
+			printf '\n' >> "$CSS"
+		fi
 		cat "$PATCH" >> "$CSS"
 		echo
 		echo "بلوک اصلاحات دوباره سوار شد."
@@ -127,7 +160,29 @@ if [ -s "$PATCH" ]; then
 	rm -f "$MISS" "$BARE"
 fi
 
-rm -rf "$NEW" "$PATCH"
+# ---------- ۶) تغییرات دستی که ابزار نمی‌تواند برگرداند ----------
+if [ -s "$TOUCHED" ]; then
+	echo
+	echo "── این فایل‌ها را ما تغییر داده بودیم و نسخهٔ تازه رویشان نوشت ──"
+	while IFS="$(printf '\t')" read -r rel note; do
+		if [ "$rel" = "$CSS_REL" ]; then
+			echo "  ✓ $rel — خودکار برگردانده شد"
+		else
+			echo "  ✗ $rel — دستی برگردانید"
+			[ -n "$note" ] && echo "      $note"
+		fi
+	done < "$TOUCHED"
+	echo
+	echo "  تغییر خودتان را از تاریخچه بگیرید:"
+	echo "    git diff HEAD -- theme/cartonpak"
+	echo "  و اگر فایلی را می‌خواهید کامل برگردانید:"
+	echo "    git checkout HEAD -- theme/cartonpak/<مسیر>"
+fi
+
+rm -rf "$NEW" "$PATCH" "$TOUCHED"
+if [ -n "$KEPT_MANIFEST" ]; then
+	rm -f "$KEPT_MANIFEST"
+fi
 
 echo
 echo "تمام شد. حالا تغییرات را بازبینی کنید:  git diff --stat theme/"

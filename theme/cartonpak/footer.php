@@ -11,10 +11,7 @@ $mobile    = cartonpak_option( 'cartonpak_mobile' );
 $hours     = cartonpak_option( 'cartonpak_hours' );
 $instagram = cartonpak_option( 'cartonpak_instagram' );
 $messenger = cartonpak_option( 'cartonpak_whatsapp' );
-$badges    = array_filter( array(
-	get_theme_mod( 'cartonpak_trust_enamad', '' ),
-	get_theme_mod( 'cartonpak_trust_samandehi', '' ),
-) );
+$badges    = cartonpak_trust_badges();
 ?>
 	</main>
 
@@ -66,8 +63,8 @@ $badges    = array_filter( array(
 
 				<?php if ( $badges ) : ?>
 					<div class="footer-col footer-trust">
-						<?php foreach ( $badges as $code ) : ?>
-							<div class="trust-slot"><?php echo $code; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- هنگام ذخیره پاک‌سازی شده است. ?></div>
+						<?php foreach ( $badges as $badge ) : ?>
+							<div class="trust-slot"><?php echo $badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- یا هنگام ذخیره پاک‌سازی شده، یا خودمان ساخته‌ایم. ?></div>
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>

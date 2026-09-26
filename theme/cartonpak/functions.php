@@ -191,6 +191,29 @@ function cartonpak_customize( $wp_customize ) {
 		) );
 	}
 
+	/* اینماد، راه سریع‌تر: تصویر روی سرور خودمان + نشانی سامانه. */
+	$wp_customize->add_setting( 'cartonpak_enamad_link', array(
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	) );
+	$wp_customize->add_control( 'cartonpak_enamad_link', array(
+		'label'       => 'نشانی نماد اعتماد (اینماد)',
+		'description' => 'همان نشانی‌ای که با کلیک روی نماد باز می‌شود؛ شکلش https://trustseal.enamad.ir/?id=...&Code=... است.',
+		'section'     => 'cartonpak_contact',
+		'type'        => 'url',
+	) );
+
+	$wp_customize->add_setting( 'cartonpak_enamad_image', array(
+		'default'           => 0,
+		'sanitize_callback' => 'absint',
+	) );
+	$wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'cartonpak_enamad_image', array(
+		'label'       => 'تصویر نماد اعتماد',
+		'description' => 'تصویر نماد را از پنل اینماد ذخیره و اینجا آپلود کنید. با پر بودن این دو فیلد، تصویر از سرور خودمان می‌آید و دیگر منتظر سرور اینماد نمی‌مانیم. اگر خالی بماند، همان «کد نماد اعتماد» پایین استفاده می‌شود.',
+		'section'     => 'cartonpak_contact',
+		'mime_type'   => 'image',
+	) ) );
+
 	$wp_customize->add_section( 'cartonpak_design', array(
 		'title'    => __( 'ظاهر فروشگاه', 'cartonpak' ),
 		'priority' => 31,
@@ -231,6 +254,131 @@ add_action( 'customize_register', 'cartonpak_customize' );
  */
 function cartonpak_sanitize_badge_code( $value ) {
 	return current_user_can( 'unfiltered_html' ) ? trim( (string) $value ) : wp_kses_post( $value );
+}
+
+/**
+ * نشان‌های اعتماد فوتر، آماده برای چاپ.
+ *
+ * برای اینماد دو راه هست. اگر تصویر و نشانی در سفارشی‌سازی پر شده باشد، خودمان
+ * نشان را می‌سازیم و تصویر از سرور خودمان می‌آید — یعنی صفحه دیگر منتظر پاسخ
+ * سرور اینماد نمی‌ماند. وگرنه همان کد چسبانده‌شده استفاده می‌شود.
+ *
+ * @return string[]
+ */
+function cartonpak_trust_badges() {
+	$badges = array();
+
+	$enamad = cartonpak_enamad_badge();
+	if ( '' === $enamad ) {
+		$enamad = cartonpak_lazy_images( (string) get_theme_mod( 'cartonpak_trust_enamad', '' ) );
+	}
+	if ( '' !== $enamad ) {
+		$badges[] = $enamad;
+	}
+
+	$samandehi = cartonpak_lazy_images( (string) get_theme_mod( 'cartonpak_trust_samandehi', '' ) );
+	if ( '' !== $samandehi ) {
+		$badges[] = $samandehi;
+	}
+
+	return $badges;
+}
+
+/**
+ * نشان اینماد از تصویر محلی. خالی، اگر تصویر یا نشانی تنظیم نشده باشد.
+ *
+ * @return string
+ */
+function cartonpak_enamad_badge() {
+	$image = (int) get_theme_mod( 'cartonpak_enamad_image', 0 );
+	$link  = trim( (string) get_theme_mod( 'cartonpak_enamad_link', '' ) );
+
+	if ( ! $image || '' === $link ) {
+		return '';
+	}
+
+	// جای نشان در فوتر ۱۰۰ پیکسل است (‎.trust-slot‎). بی این صفت، وردپرس
+	// sizes را بر پایهٔ اندازهٔ فایل می‌نویسد و مرورگر تصویر ۳۰۰ پیکسلی می‌گیرد —
+	// یعنی همان چیزی که می‌خواستیم کم کنیم. با ۱۰۰ پیکسل، نمایشگر معمولی ۱۰۰w
+	// و نمایشگر رتینا ۲۰۰w را برمی‌دارد.
+	$attr = array(
+		'alt'      => 'نماد اعتماد الکترونیکی',
+		'loading'  => 'lazy',
+		'decoding' => 'async',
+		'sizes'    => '100px',
+	);
+
+	// اینماد روی تصویرش یک صفت code می‌گذارد و هنگام بررسی دنبال همان است. از
+	// پارامتر Code همین نشانی درش می‌آوریم تا مدیر یک چیز را دو جا وارد نکند.
+	$code = cartonpak_enamad_code( $link );
+	if ( '' !== $code ) {
+		$attr['code'] = $code;
+	}
+
+	$img = wp_get_attachment_image( $image, 'medium', false, $attr );
+
+	if ( ! $img ) {
+		return '';
+	}
+
+	// referrerpolicy را اینماد در کد خودش می‌گذارد؛ دامنهٔ ارجاع‌دهنده را برای
+	// تأیید محل نصب نشان می‌بیند، پس نگهش می‌داریم.
+	return sprintf(
+		'<a href="%s" target="_blank" rel="noopener" referrerpolicy="origin">%s</a>',
+		esc_url( $link ),
+		$img
+	);
+}
+
+/**
+ * بیرون کشیدن پارامتر Code از نشانی اینماد (بی‌توجه به بزرگی و کوچکی حرف‌ها).
+ *
+ * @param string $link نشانی.
+ * @return string
+ */
+function cartonpak_enamad_code( $link ) {
+	$query = wp_parse_url( $link, PHP_URL_QUERY );
+
+	if ( ! $query ) {
+		return '';
+	}
+
+	$args = array();
+	wp_parse_str( $query, $args );
+
+	foreach ( $args as $key => $value ) {
+		if ( 'code' === strtolower( (string) $key ) && is_string( $value ) ) {
+			return $value;
+		}
+	}
+
+	return '';
+}
+
+/**
+ * افزودن loading=lazy به تصویرهای یک تکه کد چسبانده‌شده.
+ *
+ * کد رسمی سامانه‌ها این صفت را ندارد، پس مرورگر تصویر فوتر را هم‌زمان با بقیهٔ
+ * صفحه می‌گیرد — از سروری که معلوم نیست کِی جواب می‌دهد. این کار کد را عوض
+ * نمی‌کند، فقط عقب می‌اندازدش تا وقتی کاربر به فوتر رسید.
+ *
+ * @param string $html کد.
+ * @return string
+ */
+function cartonpak_lazy_images( $html ) {
+	$html = trim( $html );
+
+	if ( '' === $html || false === stripos( $html, '<img' ) ) {
+		return $html;
+	}
+
+	return (string) preg_replace_callback(
+		'#<img\b(?![^>]*\bloading\s*=)([^>]*)>#i',
+		static function ( $m ) {
+			return '<img loading="lazy" decoding="async"' . $m[1] . '>';
+		},
+		$html
+	);
 }
 
 /**

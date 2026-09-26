@@ -83,6 +83,8 @@ function wc_price( $amount ) { return number_format( (float) $amount ) . ' تو�
 function sanitize_key( $v ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $v ) ); }
 function sanitize_title( $v ) { return trim( preg_replace( '/[^\p{L}\p{N}]+/u', '-', (string) $v ), '-' ); }
 function esc_url_raw( $v ) { return (string) $v; }
+function wp_parse_url( $url, $component = -1 ) { return parse_url( $url, $component ); }
+function wp_parse_str( $string, &$array ) { parse_str( (string) $string, $array ); }
 function current_time( $type, $gmt = 0 ) {
 	// مثل وردپرس: 'timestamp' و 'U' عدد می‌دهند، بقیه رشتهٔ تاریخ.
 	if ( 'timestamp' === $type || 'U' === $type ) {
