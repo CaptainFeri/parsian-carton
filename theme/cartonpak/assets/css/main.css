@@ -2359,3 +2359,94 @@ ul.products li.pc-card {
   .product-wrap div.product .woocommerce-tabs .panel { padding: 20px; }
   .pc-quote-link { flex: 1 1 100%; }
 }
+
+/* ==== PARSIAN-MOBILE-PATCH:START ====================================
+   اصلاحات موبایل — بلوک نشانه‌دار
+   --------------------------------------------------------------------
+   این بلوک عمداً یکجا و ته فایل است و بین دو نشانهٔ بالا و پایین قرار
+   دارد. دلیلش: قالب گاهی به‌صورت کامل با نسخهٔ تازه جایگزین می‌شود، و
+   ابزار tools/update-theme.sh با همین دو نشانه بلوک را برمی‌دارد و روی
+   نسخهٔ تازه دوباره سوار می‌کند. پس این اصلاحات با هر به‌روزرسانی قالب
+   از بین نمی‌روند.
+
+   هر قاعده بر پایهٔ اندازه‌گیری واقعی روی صفحهٔ ۳۹۰ پیکسلی نوشته شده،
+   نه حدس. عددهای «پیش از اصلاح» در توضیح هر بخش آمده‌اند.
+   ==================================================================== */
+
+/* ---------- ۱) هیرو روی گوشی نباید کل صفحهٔ اول را بگیرد ----------
+   اندازه‌گیری: هیرو روی صفحهٔ ۸۴۴ پیکسلی ۷۹۹ پیکسل بود — ۹۵٪ نمای اول.
+   کاربر باید تا ته اسکرول می‌کرد تا نخستین محصول را ببیند. بیشترِ این
+   ارتفاع را قاب تصویری ۴۰۰ پیکسلی می‌ساخت که محتوای تزئینی است. */
+
+@media (max-width: 620px) {
+  .hero { padding-block: 26px; gap: 26px; }
+  .hero-text { gap: 16px; }
+  .hero h1 { font-size: 30px; line-height: 1.45; }
+  .hero-lead { font-size: 15px; line-height: 1.9; }
+
+  /* قاب تصویر کوتاه‌تر می‌شود ولی حذف نمی‌شود: اگر مدیر سایت از
+     سفارشی‌ساز عکس واقعی گذاشته باشد، آن عکس محتواست نه تزئین. */
+  .hero-visual { height: 220px; padding: 20px; }
+  .hero-cartons .carton-art:nth-child(2) { width: 150px; height: 150px; }
+
+  /* کارت‌های شناور روی قاب کوچک، روی هم و روی تصویر می‌افتادند. */
+  .float-card { display: none; }
+
+  /* دو دکمه با اندازهٔ btn-lg روی ۳۵۸ پیکسل جا نمی‌شدند و زیر هم
+     می‌افتادند: ۱۲۴ پیکسل برای دو دکمه. کمی جمع‌تر، هر دو در یک ردیف. */
+  .hero-actions { width: 100%; gap: 10px; }
+  .hero-actions .btn-lg {
+    flex: 1 1 auto;
+    min-height: 48px;
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  /* فهرست ویژگی‌ها با فونت ۱۵ پیکسل، سه ردیف جدا می‌شد (۱۲۶ پیکسل).
+     کمی کوچک‌تر، دو تا در هر ردیف جا می‌شوند. */
+  .hero-features {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding-top: 14px;
+    margin-top: 4px;
+    font-size: 13px;
+  }
+  .hero-features li { gap: 7px; }
+  .hero-features .ic svg,
+  .hero-features .ic { width: 18px; height: 18px; }
+}
+
+@media (max-width: 430px) {
+  .hero h1 { font-size: 26px; }
+  .hero-visual { height: 190px; }
+}
+
+/* ---------- ۲) هدف‌های لمسی زیر حد استاندارد ۴۴ پیکسل ----------
+   اندازه‌گیری: تلفن نوار بالا ۱۱۹×۲۳، لوگو ۱۹۰×۳۴، کشوی مرتب‌سازی
+   فروشگاه ۱۸۵×۳۵. هر سه پیوند یا کنترلی‌اند که واقعاً لمس می‌شوند. */
+
+@media (max-width: 900px) {
+  .topbar-phone,
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .shop-wrap select.orderby,
+  .woocommerce-ordering select {
+    min-height: 44px;
+    font-size: 16px; /* زیر ۱۶ پیکسل، سافاری iOS هنگام باز شدن زوم می‌کند. */
+  }
+}
+
+/* ---------- ۳) متن‌های ریزتر از حد خوانایی ----------
+   اندازه‌گیری: «Showing all 12 results» با ۱۱٫۵ پیکسل. انتخابگر دو
+   کلاسی است چون قاعدهٔ اصلی قالب هم دو کلاسی است و باید هم‌وزنش باشد. */
+
+@media (max-width: 900px) {
+  .shop-wrap .woocommerce-result-count { font-size: 12px; }
+}
+
+/* ==== PARSIAN-MOBILE-PATCH:END ====================================== */
