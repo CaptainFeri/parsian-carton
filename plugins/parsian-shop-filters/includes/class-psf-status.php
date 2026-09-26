@@ -29,6 +29,7 @@ class PSF_Status {
 		$checks = array();
 
 		$checks[] = self::check_woocommerce();
+		$checks[] = self::check_coming_soon();
 		$checks[] = self::check_shop_page();
 		$checks[] = self::check_products();
 		$checks[] = self::check_hook();
@@ -69,6 +70,35 @@ class PSF_Status {
 			'text'  => $active
 				? __( 'فعال است.', 'parsian-shop-filters' )
 				: __( 'فعال نیست. بدون ووکامرس هیچ پنلی ساخته نمی‌شود.', 'parsian-shop-filters' ),
+		);
+	}
+
+	/**
+	 * حالت «به‌زودی» ووکامرس خاموش است؟
+	 *
+	 * این یکی موذی است: مدیر سایت که وارد شده فروشگاه را سالم می‌بیند، ولی
+	 * بازدیدکنندهٔ معمولی — یعنی مشتری، و خود شما روی گوشیِ بدون ورود — صفحهٔ
+	 * «به‌زودی» را می‌بیند. حلقهٔ محصولات اصلاً اجرا نمی‌شود، پس نه محصولی هست
+	 * نه پنل فیلتری.
+	 *
+	 * @return array|null
+	 */
+	protected static function check_coming_soon() {
+		$mode = get_option( 'woocommerce_coming_soon', 'no' );
+
+		if ( 'yes' !== $mode ) {
+			return null;
+		}
+
+		$store_only = 'yes' === get_option( 'woocommerce_store_pages_only', 'no' );
+
+		return array(
+			'label' => __( 'حالت به‌زودی', 'parsian-shop-filters' ),
+			'state' => 'fail',
+			'text'  => $store_only
+				? __( 'حالت «به‌زودی» ووکامرس روشن است و صفحه‌های فروشگاه را برای بازدیدکننده با یک صفحهٔ جایگزین می‌پوشاند. شما چون وارد شده‌اید فروشگاه را می‌بینید، مشتری نه — و پنل فیلتر هم برای او وجود ندارد.', 'parsian-shop-filters' )
+				: __( 'حالت «به‌زودی» ووکامرس روی کل سایت روشن است؛ بازدیدکننده به‌جای سایت، صفحهٔ جایگزین را می‌بیند.', 'parsian-shop-filters' ),
+			'fix'   => admin_url( 'admin.php?page=wc-settings&tab=site-visibility' ),
 		);
 	}
 

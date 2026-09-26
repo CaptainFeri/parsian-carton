@@ -78,6 +78,9 @@ class PBN_Admin {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- بالا بررسی شد.
 		PBN_Settings::save( wp_unslash( $_POST ) );
 
+		// اگر کاربر همین حالا قالب را به‌روز کرده، تشخیص کش‌شده باید تازه شود.
+		PBN_Status::flush();
+
 		wp_safe_redirect(
 			add_query_arg(
 				array(
@@ -110,8 +113,10 @@ class PBN_Admin {
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'تنظیمات ذخیره شد.', 'parsian-banners' ); ?></p></div>
 			<?php endif; ?>
 
+			<?php PBN_Status::render(); ?>
+
 			<div class="pbn-card">
-				<h2><?php esc_html_e( 'وضعیت', 'parsian-banners' ); ?></h2>
+				<h2><?php esc_html_e( 'خلاصه', 'parsian-banners' ); ?></h2>
 				<p>
 					<?php
 					printf(
@@ -138,6 +143,8 @@ class PBN_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( 'pbn_settings' ); ?>
 				<input type="hidden" name="action" value="pbn_settings">
+				<?php // به ذخیره‌کننده می‌گوید این ارسال کامل فرم است، پس تیک نیامده خاموش است. ?>
+				<input type="hidden" name="pbn_form" value="1">
 
 				<div class="pbn-card">
 					<h2><?php esc_html_e( 'نمایش', 'parsian-banners' ); ?></h2>
@@ -164,6 +171,16 @@ class PBN_Admin {
 								<input type="number" id="pbn-height-sm" name="height_sm" min="140" max="700" step="10" class="small-text"
 									value="<?php echo esc_attr( PBN_Settings::get( 'height_sm' ) ); ?>"> <?php esc_html_e( 'پیکسل', 'parsian-banners' ); ?>
 								<p class="description"><?php esc_html_e( 'کف ارتفاع است، نه سقفش: اگر متن بنر بلند باشد، بنر از این بلندتر می‌شود. متن کوتاه‌تر یعنی بنر کوتاه‌تر و محصولات زودتر دیده می‌شوند.', 'parsian-banners' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'اگر قالب بنرها را صدا نزند', 'parsian-banners' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="auto_inject" value="1" <?php checked( (bool) PBN_Settings::get( 'auto_inject' ) ); ?>>
+									<?php esc_html_e( 'افزونه خودش بنر را بالای صفحهٔ اصلی بگذارد', 'parsian-banners' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'بدون این، نمایش بنر به یک خط در فایل front-page.php قالب بند است؛ اگر قالب روی سرور به‌روز نشود، بنر ساخته می‌شود ولی هیچ‌جا دیده نمی‌شود.', 'parsian-banners' ); ?></p>
 							</td>
 						</tr>
 						<tr>

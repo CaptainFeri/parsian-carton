@@ -35,6 +35,8 @@ class PBN_Settings {
 			'height_sm'   => 300,
 			// وقتی بنری تعریف نشده باشد، اسلایدر ثابت قالب نشان داده شود؟
 			'fallback'    => 1,
+			// اگر قالب بنرها را صدا نزند، افزونه خودش بالای صفحهٔ اصلی تزریقشان کند؟
+			'auto_inject' => 1,
 		);
 	}
 
@@ -79,6 +81,12 @@ class PBN_Settings {
 		}
 
 		$clean['fallback'] = empty( $values['fallback'] ) ? 0 : 1;
+
+		// چک‌باکس خاموش در POST نمی‌آید؛ فیلد پنهان pbn_form این دو حالت را جدا
+		// می‌کند تا ذخیرهٔ برنامه‌ای تنظیم را خاموش نکند.
+		if ( ! empty( $values['pbn_form'] ) || array_key_exists( 'auto_inject', $values ) ) {
+			$clean['auto_inject'] = empty( $values['auto_inject'] ) ? 0 : 1;
+		}
 
 		update_option( self::OPTION, $clean, true );
 		self::$cache = null;

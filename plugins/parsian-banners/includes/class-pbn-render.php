@@ -18,11 +18,23 @@ defined( 'ABSPATH' ) || exit;
 class PBN_Render {
 
 	/**
+	 * HTML بنر، ساخته‌شده پیش از باز شدن بافر خروجی.
+	 *
+	 * @var string
+	 */
+	protected static $pending = '';
+
+	/**
 	 * ثبت قلاب‌ها.
 	 */
 	public static function init() {
 		add_shortcode( 'parsian_banners', array( __CLASS__, 'shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
+
+		// تکیه کردن به یک خط در front-page.php قالب شکننده است: اگر فایل‌های
+		// قالب روی سرور به‌روز نشوند، بنرِ ساخته‌شده هیچ‌وقت دیده نمی‌شود و هیچ
+		// خطایی هم جایی ظاهر نمی‌شود. این قلاب همان حالت را می‌پوشاند.
+		add_action( 'template_redirect', array( __CLASS__, 'maybe_auto_inject' ) );
 	}
 
 	/**
@@ -52,6 +64,70 @@ class PBN_Render {
 	public static function enqueue() {
 		wp_register_style( 'pbn-banners', PBN_URL . 'assets/pbn.css', array(), PBN_VERSION );
 		wp_register_script( 'pbn-banners', PBN_URL . 'assets/pbn.js', array(), PBN_VERSION, true );
+
+		// در مسیر تزریق خودکار، html() داخل بافر خروجی اجرا می‌شود — یعنی بعد از
+		// چاپ wp_head. پس استایل باید همین‌جا، زودتر، در صف بنشیند.
+		if ( is_front_page() && PBN_Banner::active( 'home' ) ) {
+			wp_enqueue_style( 'pbn-banners' );
+			wp_enqueue_script( 'pbn-banners' );
+		}
+	}
+
+	/**
+	 * تزریق خودکار بنر بالای صفحهٔ اصلی، وقتی قالب خودش صدایش نمی‌زند.
+	 */
+	public static function maybe_auto_inject() {
+		if ( is_admin() || ! is_front_page() ) {
+			return;
+		}
+
+		if ( ! PBN_Settings::get( 'auto_inject' ) || PBN_Status::theme_calls_hook() ) {
+			return;
+		}
+
+		if ( ! PBN_Banner::active( 'home' ) ) {
+			return;
+		}
+
+		// HTML همین‌جا ساخته می‌شود، نه داخل callback بافر: html() خودش از
+		// ob_start() استفاده می‌کند و PHP باز کردن بافر تازه را داخل یک
+		// «output buffering display handler» ممنوع کرده است. اگر آنجا صدایش
+		// بزنیم، بی‌صدا شکست می‌خورد و صفحه بدون بنر برمی‌گردد.
+		self::$pending = self::html( 'home' );
+
+		if ( '' === self::$pending ) {
+			return;
+		}
+
+		ob_start( array( __CLASS__, 'inject' ) );
+	}
+
+	/**
+	 * جا دادن بنر در خروجی صفحه.
+	 *
+	 * بعد از باز شدن <main> می‌نشیند — یعنی زیر هدر و بالای محتوا. اگر قالب
+	 * <main> نداشت، بعد از بسته شدن هدر. اگر هیچ‌کدام نبود، صفحه دست‌نخورده
+	 * برمی‌گردد؛ بنر دیده نمی‌شود ولی چیزی هم خراب نمی‌شود.
+	 *
+	 * @param string $html خروجی صفحه.
+	 * @return string
+	 */
+	public static function inject( $html ) {
+		$banner = self::$pending;
+
+		if ( '' === $banner ) {
+			return $html;
+		}
+
+		foreach ( array( '/<main\b[^>]*>/i', '/<\/header>/i' ) as $pattern ) {
+			if ( preg_match( $pattern, $html, $match, PREG_OFFSET_CAPTURE ) ) {
+				$at = $match[0][1] + strlen( $match[0][0] );
+
+				return substr( $html, 0, $at ) . $banner . substr( $html, $at );
+			}
+		}
+
+		return $html;
 	}
 
 	/**

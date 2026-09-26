@@ -3,7 +3,7 @@
  * Plugin Name:       پارسیان کارتن — مدیریت بنرها
  * Plugin URI:        https://parsiancarton.com/
  * Description:       بنرهای صفحهٔ اصلی را از پیشخوان مدیریت می‌کند: تصویر، عنوان، توضیح، دکمه‌ها، ترتیب، بازهٔ نمایش و اینکه روی موبایل دیده شود یا دسکتاپ. اسلایدر خروجی از همان ساختار قالب استفاده می‌کند، پس ظاهر سایت عوض نمی‌شود — فقط محتوایش قابل ویرایش می‌شود.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Parsian Carton
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PBN_VERSION', '1.0.0' );
+define( 'PBN_VERSION', '1.1.0' );
 define( 'PBN_FILE', __FILE__ );
 define( 'PBN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PBN_URL', plugin_dir_url( __FILE__ ) );
@@ -24,6 +24,7 @@ require_once PBN_PATH . 'includes/helpers.php';
 require_once PBN_PATH . 'includes/class-pbn-settings.php';
 require_once PBN_PATH . 'includes/class-pbn-banner.php';
 require_once PBN_PATH . 'includes/class-pbn-post-type.php';
+require_once PBN_PATH . 'includes/class-pbn-status.php';
 require_once PBN_PATH . 'includes/class-pbn-render.php';
 
 if ( is_admin() ) {

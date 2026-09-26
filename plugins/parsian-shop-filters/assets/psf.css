@@ -574,9 +574,14 @@
     padding: 16px 18px 28px;
   }
 
+  /* سایت راست‌چین: پنل از سمت چپ بیرون صفحه می‌ایستد. */
   html[dir="rtl"] .psf-panel { transform: translateX(-100%); }
 
-  .psf-panel.is-open { transform: translateX(0); }
+  /* هر دو حالت لازم‌اند. انتخابگر بالا وزن (۰,۲,۱) دارد و اگر حالت باز را فقط
+     با `.psf-panel.is-open` — وزن (۰,۲,۰) — بنویسیم، روی سایت راست‌چین حالت
+     بسته همیشه برنده می‌شود: پوشش خاکستری می‌آید ولی پنل بیرون صفحه می‌ماند. */
+  .psf-panel.is-open,
+  html[dir="rtl"] .psf-panel.is-open { transform: translateX(0); }
   .psf-panel-head { display: flex; }
   .psf-facets { grid-template-columns: 1fr; gap: 16px; }
 
