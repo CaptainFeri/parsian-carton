@@ -16,12 +16,19 @@ for plugin in plugins/*/; do
 	echo "ساخته شد: dist/${name}.zip"
 done
 
-# ۲) یک بستهٔ واحد با ساختار مسیر وردپرس — برای اکسترکت مستقیم در ریشهٔ وب سرور.
-#    هیچ فایل دیگری غیر از دو پوشهٔ افزونه داخلش نیست، پس چیزی از سایت را
+# ۲) zip قالب — برای «نمایش ← پوسته‌ها ← افزودن ← بارگذاری پوسته»
+if [ -d theme/cartonpak ]; then
+	( cd theme && zip -rq "../dist/cartonpak-theme.zip" cartonpak -x '*.DS_Store' '*/.*' )
+	echo "ساخته شد: dist/cartonpak-theme.zip"
+fi
+
+# ۳) یک بستهٔ واحد با ساختار مسیر وردپرس — برای اکسترکت مستقیم در ریشهٔ وب سرور.
+#    فقط پوشه‌های افزونه و قالبِ خودمان داخلش است، پس چیز دیگری از سایت را
 #    بازنویسی نمی‌کند.
 staging="$(mktemp -d)"
-mkdir -p "$staging/wp-content/plugins"
+mkdir -p "$staging/wp-content/plugins" "$staging/wp-content/themes"
 cp -r plugins/*/ "$staging/wp-content/plugins/"
+[ -d theme/cartonpak ] && cp -r theme/cartonpak "$staging/wp-content/themes/"
 ( cd "$staging" && zip -rq "$OLDPWD/dist/deploy-plugins.zip" wp-content -x '*.DS_Store' '*/.*' )
 rm -rf "$staging"
-echo "ساخته شد: dist/deploy-plugins.zip  (در ریشهٔ وب اکسترکت شود)"
+echo "ساخته شد: dist/deploy-plugins.zip  (در ریشهٔ وب اکسترکت شود — افزونه‌ها + قالب)"

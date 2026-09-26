@@ -11,7 +11,17 @@ $has_wc = class_exists( 'WooCommerce' );
 $shop_url = $has_wc ? wc_get_page_permalink( 'shop' ) : home_url( '/' );
 ?>
 
-<?php /* ---------- اسلایدر ---------- */ ?>
+<?php
+/* ---------- بنرها ----------
+ *
+ * اگر افزونهٔ «مدیریت بنرها» فعال باشد و بنری تعریف شده باشد، اسلایدر از
+ * پیشخوان می‌آید. در غیر این صورت اسلایدر ثابتِ پایین نمایش داده می‌شود — پس
+ * قالب بدون افزونه هم کامل کار می‌کند.
+ */
+$cartonpak_banners = function_exists( 'parsian_banners_render' ) ? parsian_banners_render( 'home' ) : false;
+
+if ( ! $cartonpak_banners ) :
+	?>
 <section class="hero">
 	<div class="container hero-slider" id="heroSlider">
 		<div class="hero-slide is-active">
@@ -85,6 +95,9 @@ $shop_url = $has_wc ? wc_get_page_permalink( 'shop' ) : home_url( '/' );
 		<div class="hero-dots" id="heroDots"></div>
 	</div>
 </section>
+	<?php
+endif;
+?>
 
 <?php /* ---------- مزایای فوری ---------- */ ?>
 <section class="quick-benefits">

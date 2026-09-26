@@ -1,0 +1,141 @@
+/* بنرهای مدیریت‌شده — پارسیان کارتن
+   ساختار همان اسلایدر قالب است؛ این فایل فقط چیزهایی را اضافه می‌کند که قالب
+   ندارد: تصویر پس‌زمینه، لایهٔ تیره، ارتفاع قابل تنظیم و نمایش وابسته به دستگاه. */
+
+.pbn-hero .hero-slider {
+  min-height: var(--pbn-height, 420px);
+}
+
+.pbn-slide {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius, 14px);
+}
+
+/* تصویر روی یک لایهٔ جدا می‌نشیند تا لایهٔ تیره بتواند بینش و متن قرار بگیرد. */
+.pbn-slide-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--pbn-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.pbn-slide-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #0c0c0e;
+  opacity: var(--pbn-overlay, .45);
+}
+
+.pbn-slide .hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* متن روشن روی تصویر تیره. */
+.pbn-scheme-light .hero-title,
+.pbn-scheme-light .hero-desc,
+.pbn-scheme-light .hero-features li {
+  color: #fff;
+}
+
+.pbn-scheme-light .hero-title em {
+  color: var(--primary, #f5a623);
+  font-style: normal;
+}
+
+.pbn-scheme-light .hero-eyebrow {
+  background: rgba(255, 255, 255, .16);
+  color: #fff;
+}
+
+/* متن تیره روی تصویر روشن. */
+.pbn-scheme-dark .hero-title,
+.pbn-scheme-dark .hero-desc,
+.pbn-scheme-dark .hero-features li {
+  color: var(--dark, #0c0c0e);
+}
+
+.pbn-scheme-dark .hero-title em {
+  color: var(--primary, #f5a623);
+  font-style: normal;
+}
+
+/* نمایش وابسته به دستگاه — با CSS، نه با تشخیص سمت سرور، تا صفحهٔ کش‌شده هم
+   درست کار کند. */
+.pbn-only-mobile { display: none; }
+
+@media (max-width: 782px) {
+  .pbn-hero .hero-slider {
+    min-height: var(--pbn-height-sm, 300px);
+  }
+
+  .pbn-only-desktop { display: none !important; }
+
+  .pbn-only-mobile.is-active { display: flex; }
+
+  .pbn-slide .hero-content {
+    padding-block: 26px;
+  }
+
+  /* تصویر ویژهٔ موبایل، اگر تعریف شده باشد. */
+  .pbn-slide-bg {
+    background-image: var(--pbn-image-sm, var(--pbn-image));
+  }
+
+  /* روی صفحهٔ کوچک، متن روی تصویر شلوغ می‌شود؛ لایهٔ تیره کمی پررنگ‌تر. */
+  .pbn-scheme-light .pbn-slide-bg::after {
+    opacity: calc(var(--pbn-overlay, .45) + .15);
+  }
+}
+
+/* ---------- جمع‌وجور کردن بنر روی موبایل ----------
+   بنر بلند روی گوشی کل صفحهٔ اول را می‌گیرد و کاربر هیچ محصولی نمی‌بیند.
+   اندازه‌گیری: بنر پیش‌فرض روی صفحهٔ ۸۴۴ پیکسلی ۵۸۰ پیکسل می‌شد — ۶۹٪ صفحه.
+   اینجا همان محتوا در حدود ۴۰۰ پیکسل جا می‌گیرد. */
+
+@media (max-width: 782px) {
+  .pbn-slide .hero-content {
+    padding-block: 22px;
+    gap: 10px;
+  }
+
+  .pbn-hero .hero-title {
+    font-size: 21px;
+    line-height: 1.7;
+  }
+
+  .pbn-hero .hero-desc {
+    font-size: 13.5px;
+    line-height: 1.9;
+    /* توضیح بلند روی گوشی به چهار خط می‌رسید. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .pbn-hero .hero-eyebrow { font-size: 12px; }
+
+  /* فهرست ویژگی‌ها تکرار همان چیزی است که پایین‌تر در «مزایا» هم آمده؛
+     روی گوشی جایش را به محصولات می‌دهد. */
+  .pbn-hero .hero-features { display: none; }
+
+  .pbn-hero .hero-cta { gap: 8px; }
+  .pbn-hero .hero-cta .btn { min-height: 44px; font-size: 14px; }
+
+  /* فلش‌ها روی گوشی کوچک‌تر و کم‌رنگ‌تر — کشیدن با انگشت راه اصلی است. */
+  .pbn-hero .hero-arrow {
+    width: 38px;
+    height: 38px;
+    opacity: .75;
+  }
+}
+
+@media (max-width: 430px) {
+  .pbn-hero .hero-title { font-size: 19px; }
+  .pbn-hero .hero-desc { -webkit-line-clamp: 2; }
+}
