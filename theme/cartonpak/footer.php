@@ -1,100 +1,80 @@
 <?php
 /**
- * فوتر قالب کارتن‌پک
+ * فوتر قالب: درباره، دسترسی سریع، تماس و نمادهای اعتماد.
  *
  * @package cartonpak
  */
 
-function cartonpak_default_menu() {
-	echo '<ul class="main-menu">';
-	$items = array(
-		array( 'خانه', home_url( '/' ) ),
-	);
-	if ( class_exists( 'WooCommerce' ) ) {
-		$items[] = array( 'فروشگاه', wc_get_page_permalink( 'shop' ) );
-	}
-	$items[] = array( 'وبلاگ', home_url( '/blog/' ) );
-	$items[] = array( 'درباره ما', home_url( '/about-us/' ) );
-	$items[] = array( 'تماس با ما', home_url( '/contact-us/' ) );
-	foreach ( $items as $item ) {
-		echo '<li><a href="' . esc_url( $item[1] ) . '">' . esc_html( $item[0] ) . '</a></li>';
-	}
-	echo '</ul>';
-}
+$address   = cartonpak_option( 'cartonpak_address' );
+$phone     = cartonpak_option( 'cartonpak_phone' );
+$mobile    = cartonpak_option( 'cartonpak_mobile' );
+$hours     = cartonpak_option( 'cartonpak_hours' );
+$instagram = cartonpak_option( 'cartonpak_instagram' );
+$messenger = cartonpak_option( 'cartonpak_whatsapp' );
+$badges    = array_filter( array(
+	get_theme_mod( 'cartonpak_trust_enamad', '' ),
+	get_theme_mod( 'cartonpak_trust_samandehi', '' ),
+) );
 ?>
-
 	</main>
 
-	<footer class="site-footer">
-		<div class="footer-newsletter">
-			<div class="container footer-newsletter-inner">
-				<div class="newsletter-text">
-					<strong>از تخفیف‌ها و جدیدترین‌های فروشگاه باخبر شوید</strong>
-					<span>عضویت در خبرنامه کارتن‌پک و دریافت کد تخفیف ۵۰ هزار تومانی 🎁</span>
+	<footer class="site-footer" id="contact">
+		<div class="container">
+			<div class="footer-grid<?php echo $badges ? ' has-trust' : ''; ?>">
+				<div class="footer-col footer-about">
+					<span class="footer-brand"><?php bloginfo( 'name' ); ?></span>
+					<p>تولیدکنندهٔ انواع کارتن و جعبهٔ بسته‌بندی سه‌لایه و پنج‌لایه، جعبه‌های دایکاتی چاپی، سینی و لایی؛ مستقر در شهرک صنعتی شرق سمنان با ارسال به سراسر کشور.</p>
+					<?php if ( $instagram || $messenger ) : ?>
+						<div class="footer-social">
+							<?php if ( $instagram ) : ?>
+								<a href="<?php echo esc_url( $instagram ); ?>" target="_blank" rel="noopener">اینستاگرام</a>
+							<?php endif; ?>
+							<?php if ( $messenger ) : ?>
+								<a href="<?php echo esc_url( $messenger ); ?>" target="_blank" rel="noopener">روبیکا، بله، ایتا</a>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
 				</div>
-				<form class="newsletter-form" id="newsletterForm">
-					<input type="text" placeholder="شماره موبایل" aria-label="شماره موبایل">
-					<button type="submit">ارسال</button>
-				</form>
-			</div>
-		</div>
 
-		<div class="container footer-main">
-			<div class="footer-col footer-about">
-				<h4 class="footer-title">درباره پارسیان کارتن</h4>
-				<p>
-					تولیدکننده انواع کارتن و جعبه‌های بسته‌بندی سه لایه و پنج لایه، جعبه‌های مقوایی دایکاتی چاپی،
-					سینی، لایی و کارتن‌های لمینتی؛ مستقر در شهرک صنعتی شرق سمنان با ارسال به سراسر کشور.
-				</p>
-				<div class="footer-social">
-					<a href="<?php echo esc_url( cartonpak_option( 'cartonpak_instagram' ) ); ?>" target="_blank" rel="noopener" aria-label="اینستاگرام">📸</a>
-					<a href="<?php echo esc_url( cartonpak_option( 'cartonpak_whatsapp' ) ); ?>" target="_blank" rel="noopener" aria-label="پیام‌رسان‌ها">💬</a>
+				<nav class="footer-col" aria-labelledby="footerLinksTitle">
+					<h2 class="footer-title" id="footerLinksTitle">دسترسی سریع</h2>
+					<?php
+					wp_nav_menu( array(
+						'theme_location' => 'footer',
+						'container'      => false,
+						'menu_class'     => 'footer-menu',
+						'depth'          => 1,
+						'fallback_cb'    => 'cartonpak_default_footer_menu',
+					) );
+					?>
+				</nav>
+
+				<div class="footer-col">
+					<h2 class="footer-title">تماس با ما</h2>
+					<ul class="footer-contact">
+						<?php if ( $address ) : ?>
+							<li><?php echo cartonpak_icon( 'pin', 18 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><span><?php echo esc_html( $address ); ?></span></li>
+						<?php endif; ?>
+						<?php foreach ( array_unique( array_filter( array( $phone, $mobile ) ) ) as $number ) : ?>
+							<li><?php echo cartonpak_icon( 'phone', 18 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><a href="<?php echo esc_url( cartonpak_tel( $number ) ); ?>" dir="ltr"><?php echo esc_html( $number ); ?></a></li>
+						<?php endforeach; ?>
+						<?php if ( $hours ) : ?>
+							<li><?php echo cartonpak_icon( 'clock', 18 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><span><?php echo esc_html( $hours ); ?></span></li>
+						<?php endif; ?>
+					</ul>
 				</div>
+
+				<?php if ( $badges ) : ?>
+					<div class="footer-col footer-trust">
+						<?php foreach ( $badges as $code ) : ?>
+							<div class="trust-slot"><?php echo $code; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- هنگام ذخیره پاک‌سازی شده است. ?></div>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
 			</div>
 
-			<div class="footer-col">
-				<h4 class="footer-title">دسترسی سریع</h4>
-				<?php
-				wp_nav_menu( array(
-					'theme_location' => 'footer',
-					'container'      => false,
-					'menu_class'     => 'footer-menu',
-					'fallback_cb'    => false,
-				) );
-				?>
-			</div>
-
-			<div class="footer-col">
-				<h4 class="footer-title">اطلاعات تماس</h4>
-				<ul class="footer-contact">
-					<li>
-						<span class="fc-icon">📍</span>
-						<span><?php echo esc_html( cartonpak_option( 'cartonpak_address' ) ); ?></span>
-					</li>
-					<li>
-						<span class="fc-icon">☎</span>
-						<a href="tel:<?php echo esc_attr( cartonpak_option( 'cartonpak_phone' ) ); ?>" dir="ltr"><?php echo esc_html( cartonpak_option( 'cartonpak_phone' ) ); ?></a>
-					</li>
-					<li>
-						<span class="fc-icon">📱</span>
-						<a href="tel:<?php echo esc_attr( cartonpak_option( 'cartonpak_mobile' ) ); ?>" dir="ltr"><?php echo esc_html( cartonpak_option( 'cartonpak_mobile' ) ); ?></a>
-					</li>
-					<li>
-						<span class="fc-icon">📦</span>
-						<a href="tel:<?php echo esc_attr( cartonpak_option( 'cartonpak_support' ) ); ?>" dir="ltr">پیگیری سفارش: <?php echo esc_html( cartonpak_option( 'cartonpak_support' ) ); ?></a>
-					</li>
-				</ul>
-				<div class="footer-trust">
-					<div class="trust-badge">نماد اعتماد الکترونیکی</div>
-					<div class="trust-badge trust-ssl">اتصال امن SSL</div>
-				</div>
-			</div>
-		</div>
-
-		<div class="footer-bottom">
-			<div class="container footer-bottom-inner">
-				<span>© <?php echo esc_html( date_i18n( 'Y' ) ); ?> کلیه حقوق این وب‌سایت متعلق به پارسیان کارتن است.</span>
-				<span>شعار ما: کیفیت، سرعت و دقت</span>
+			<div class="footer-bottom">
+				© <?php echo esc_html( cartonpak_digits( date_i18n( 'Y' ) ) ); ?> <?php bloginfo( 'name' ); ?> — تمامی حقوق محفوظ است.
 			</div>
 		</div>
 	</footer>

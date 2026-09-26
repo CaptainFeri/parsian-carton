@@ -1,141 +1,273 @@
 /* بنرهای مدیریت‌شده — پارسیان کارتن
-   ساختار همان اسلایدر قالب است؛ این فایل فقط چیزهایی را اضافه می‌کند که قالب
-   ندارد: تصویر پس‌زمینه، لایهٔ تیره، ارتفاع قابل تنظیم و نمایش وابسته به دستگاه. */
+   ------------------------------------------------------------------
+   خودکفا: به هیچ کلاسی از قالب تکیه نمی‌کند. رنگ‌ها از متغیرهای قالب
+   خوانده می‌شوند ولی هرکدام مقدار جایگزین دارند، تا اگر قالب عوض شد یا
+   متغیری نداشت، بنر همچنان درست دیده شود. */
 
-.pbn-hero .hero-slider {
-  min-height: var(--pbn-height, 420px);
-}
+.pbn-banners {
+  --pbn-ink: var(--c-ink, #1E1A15);
+  --pbn-surface: var(--c-hero, #EADBC6);
+  --pbn-accent: var(--c-accent, #8A5429);
+  --pbn-radius: var(--r-card, 18px);
 
-.pbn-slide {
   position: relative;
+  width: min(var(--container, 1280px), 100% - (2 * var(--gutter, 16px)));
+  margin-inline: auto;
+  margin-block: 18px 26px;
+  border-radius: var(--pbn-radius);
   overflow: hidden;
-  border-radius: var(--radius, 14px);
+  background: var(--pbn-surface);
 }
 
-/* تصویر روی یک لایهٔ جدا می‌نشیند تا لایهٔ تیره بتواند بینش و متن قرار بگیرد. */
-.pbn-slide-bg {
+/* ---------- ناحیهٔ اسلایدها ---------- */
+
+.pbn-viewport {
+  position: relative;
+  min-height: var(--pbn-height, 420px);
+  display: grid;
+}
+
+/* همهٔ اسلایدها روی هم می‌نشینند؛ فقط فعال دیده می‌شود. چیدمان grid باعث
+   می‌شود ارتفاع قاب با بلندترین اسلاید تعیین شود و با هر تعویض نپرد. */
+.pbn-slide {
+  grid-area: 1 / 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 34px clamp(20px, 5vw, 56px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .45s ease;
+}
+
+.pbn-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pbn-slide { transition: none; }
+}
+
+/* ---------- تصویر و لایهٔ تیره ---------- */
+
+.pbn-bg {
   position: absolute;
   inset: 0;
-  z-index: 0;
   background-image: var(--pbn-image);
   background-size: cover;
   background-position: center;
 }
 
-.pbn-slide-bg::after {
+.pbn-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: #0c0c0e;
+  background: #17120C;
   opacity: var(--pbn-overlay, .45);
 }
 
-.pbn-slide .hero-content {
+/* ---------- محتوا ---------- */
+
+.pbn-content {
   position: relative;
   z-index: 1;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
 }
 
-/* متن روشن روی تصویر تیره. */
-.pbn-scheme-light .hero-title,
-.pbn-scheme-light .hero-desc,
-.pbn-scheme-light .hero-features li {
-  color: #fff;
-}
-
-.pbn-scheme-light .hero-title em {
-  color: var(--primary, #f5a623);
-  font-style: normal;
-}
-
-.pbn-scheme-light .hero-eyebrow {
+.pbn-eyebrow {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: var(--r-pill, 999px);
   background: rgba(255, 255, 255, .16);
-  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.9;
 }
 
-/* متن تیره روی تصویر روشن. */
-.pbn-scheme-dark .hero-title,
-.pbn-scheme-dark .hero-desc,
-.pbn-scheme-dark .hero-features li {
-  color: var(--dark, #0c0c0e);
+.pbn-title {
+  margin: 0;
+  font-size: clamp(24px, 3.4vw, 40px);
+  font-weight: 800;
+  line-height: 1.55;
 }
 
-.pbn-scheme-dark .hero-title em {
-  color: var(--primary, #f5a623);
+.pbn-title em {
   font-style: normal;
+  color: var(--pbn-highlight, #E3A857);
 }
 
-/* نمایش وابسته به دستگاه — با CSS، نه با تشخیص سمت سرور، تا صفحهٔ کش‌شده هم
-   درست کار کند. */
+.pbn-desc {
+  margin: 0;
+  font-size: clamp(14px, 1.3vw, 17px);
+  line-height: 2;
+  max-width: 54ch;
+}
+
+.pbn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* اگر قالب کلاس btn نداشت، دکمه باز هم دکمه به‌نظر برسد. */
+.pbn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: var(--r-btn, 12px);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pbn-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+/* ---------- متن روی تصویر تیره / روشن ---------- */
+
+.pbn-on-dark { color: #FFFFFF; }
+.pbn-on-dark .pbn-desc,
+.pbn-on-dark .pbn-features { color: rgba(255, 255, 255, .88); }
+
+.pbn-on-light { color: var(--pbn-ink); }
+.pbn-on-light .pbn-eyebrow {
+  background: var(--c-accent-soft, #F1E3CF);
+  color: var(--c-eyebrow, #6E4220);
+}
+.pbn-on-light .pbn-title em { color: var(--pbn-accent); }
+.pbn-on-light .pbn-desc,
+.pbn-on-light .pbn-features { color: var(--c-muted, #5E554A); }
+
+/* بنر بدون تصویر روی زمینهٔ کرم قالب می‌نشیند. */
+.pbn-slide:not(:has(.pbn-bg)).pbn-on-dark { background: var(--pbn-ink); }
+
+/* ---------- فلش‌ها و نقطه‌ها ---------- */
+
+.pbn-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .88);
+  color: var(--pbn-ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-float, 0 8px 24px rgba(30, 26, 21, .10));
+}
+
+.pbn-nav:hover { background: #fff; }
+
+/* در چیدمان راست‌چین «قبلی» سمت راست می‌نشیند. جهت با منطق logical تعیین
+   می‌شود تا هر دو جهت بدون قاعدهٔ جداگانه درست باشند. */
+.pbn-prev { inset-inline-start: 12px; }
+.pbn-next { inset-inline-end: 12px; }
+
+.pbn-dots {
+  position: absolute;
+  inset-block-end: 14px;
+  inset-inline: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pbn-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill, 999px);
+  background: rgba(255, 255, 255, .55);
+  cursor: pointer;
+  transition: width .25s ease, background .25s ease;
+  position: relative;
+}
+
+/* ناحیهٔ لمسی بزرگ، بدون بزرگ کردن خود نقطه. */
+.pbn-dot::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+}
+
+.pbn-dot.is-active {
+  width: 26px;
+  background: #fff;
+}
+
+.pbn-single .pbn-viewport { min-height: var(--pbn-height, 420px); }
+
+/* ---------- نمایش وابسته به دستگاه ---------- */
+
 .pbn-only-mobile { display: none; }
 
+/* ---------- موبایل ----------
+   بنر بلند روی گوشی کل صفحهٔ اول را می‌گیرد و کاربر هیچ محصولی نمی‌بیند. */
+
 @media (max-width: 782px) {
-  .pbn-hero .hero-slider {
-    min-height: var(--pbn-height-sm, 300px);
-  }
+  .pbn-banners { margin-block: 12px 18px; border-radius: var(--r-card, 18px); }
+
+  .pbn-viewport { min-height: var(--pbn-height-sm, 300px); }
+
+  .pbn-slide { padding: 24px 20px; }
 
   .pbn-only-desktop { display: none !important; }
-
   .pbn-only-mobile.is-active { display: flex; }
 
-  .pbn-slide .hero-content {
-    padding-block: 26px;
-  }
+  .pbn-bg { background-image: var(--pbn-image-sm, var(--pbn-image)); }
 
-  /* تصویر ویژهٔ موبایل، اگر تعریف شده باشد. */
-  .pbn-slide-bg {
-    background-image: var(--pbn-image-sm, var(--pbn-image));
-  }
+  /* متن روی تصویر در قاب کوچک شلوغ می‌شود. */
+  .pbn-on-dark .pbn-bg::after { opacity: calc(var(--pbn-overlay, .45) + .12); }
 
-  /* روی صفحهٔ کوچک، متن روی تصویر شلوغ می‌شود؛ لایهٔ تیره کمی پررنگ‌تر. */
-  .pbn-scheme-light .pbn-slide-bg::after {
-    opacity: calc(var(--pbn-overlay, .45) + .15);
-  }
-}
+  .pbn-content { gap: 10px; max-width: none; }
+  .pbn-title { font-size: 21px; line-height: 1.7; }
 
-/* ---------- جمع‌وجور کردن بنر روی موبایل ----------
-   بنر بلند روی گوشی کل صفحهٔ اول را می‌گیرد و کاربر هیچ محصولی نمی‌بیند.
-   اندازه‌گیری: بنر پیش‌فرض روی صفحهٔ ۸۴۴ پیکسلی ۵۸۰ پیکسل می‌شد — ۶۹٪ صفحه.
-   اینجا همان محتوا در حدود ۴۰۰ پیکسل جا می‌گیرد. */
-
-@media (max-width: 782px) {
-  .pbn-slide .hero-content {
-    padding-block: 22px;
-    gap: 10px;
-  }
-
-  .pbn-hero .hero-title {
-    font-size: 21px;
-    line-height: 1.7;
-  }
-
-  .pbn-hero .hero-desc {
+  .pbn-desc {
     font-size: 13.5px;
     line-height: 1.9;
-    /* توضیح بلند روی گوشی به چهار خط می‌رسید. */
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .pbn-hero .hero-eyebrow { font-size: 12px; }
-
-  /* فهرست ویژگی‌ها تکرار همان چیزی است که پایین‌تر در «مزایا» هم آمده؛
+  /* فهرست ویژگی‌ها همان چیزی را تکرار می‌کند که پایین‌تر در صفحه هم آمده؛
      روی گوشی جایش را به محصولات می‌دهد. */
-  .pbn-hero .hero-features { display: none; }
+  .pbn-features { display: none; }
 
-  .pbn-hero .hero-cta { gap: 8px; }
-  .pbn-hero .hero-cta .btn { min-height: 44px; font-size: 14px; }
+  .pbn-actions { width: 100%; }
+  .pbn-btn { min-height: 44px; padding: 0 18px; font-size: 14px; flex: 1 1 auto; }
 
-  /* فلش‌ها روی گوشی کوچک‌تر و کم‌رنگ‌تر — کشیدن با انگشت راه اصلی است. */
-  .pbn-hero .hero-arrow {
-    width: 38px;
-    height: 38px;
-    opacity: .75;
-  }
+  /* فلش‌ها روی قاب باریک، درست وسط متن می‌افتادند و توضیح را می‌پوشاندند.
+     روی لمسی، کشیدن با انگشت و نقطه‌ها کافی‌اند — پس متن تمام عرض را می‌گیرد. */
+  .pbn-nav { display: none; }
+
+  .pbn-dots { inset-block-end: 12px; }
 }
 
 @media (max-width: 430px) {
-  .pbn-hero .hero-title { font-size: 19px; }
-  .pbn-hero .hero-desc { -webkit-line-clamp: 2; }
+  .pbn-title { font-size: 19px; }
+  .pbn-desc { -webkit-line-clamp: 2; }
+  .pbn-slide { padding: 20px 16px; }
 }

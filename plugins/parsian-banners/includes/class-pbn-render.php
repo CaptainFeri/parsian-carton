@@ -2,10 +2,14 @@
 /**
  * ساخت اسلایدر بنرها.
  *
- * عمداً همان نام‌های کلاسِ اسلایدر قالب استفاده می‌شود (`hero`, `hero-slide`,
- * `hero-title` و…). نتیجه این است که استایل و جاوااسکریپت موجود قالب بدون یک
- * خط کد تازه روی بنرهای مدیریت‌شده هم کار می‌کنند و ظاهر سایت عوض نمی‌شود —
- * فقط محتوایش از پیشخوان می‌آید.
+ * خروجی این کلاس **خودکفاست**: مارک‌آپ، استایل و اسلایدرش مال خودش است و به
+ * هیچ کلاسی از قالب تکیه نمی‌کند.
+ *
+ * نسخهٔ اول از کلاس‌های اسلایدر قالب استفاده می‌کرد تا کد تازه‌ای لازم نشود؛
+ * بعد قالب بازنویسی شد، اسلایدرش حذف شد و بنرها بی‌استایل روی هم ریختند. درسش
+ * این بود: افزونه نباید به ساختار داخلی قالب بند باشد. تنها چیزی که از قالب
+ * قرض گرفته می‌شود کلاس‌های `btn` و متغیرهای رنگ است — آن هم با مقدار جایگزین،
+ * تا بدون قالب هم درست دیده شود.
  *
  * @package parsian-banners
  */
@@ -180,24 +184,39 @@ class PBN_Render {
 		wp_enqueue_script( 'pbn-banners' );
 
 		$interval = (int) PBN_Settings::get( 'interval' );
+		$single   = count( $banners ) < 2;
 
 		ob_start();
 		?>
-		<section class="hero pbn-hero"
+		<section class="pbn-banners<?php echo $single ? ' pbn-single' : ''; ?>"
 			style="--pbn-height:<?php echo esc_attr( (int) PBN_Settings::get( 'height' ) ); ?>px;--pbn-height-sm:<?php echo esc_attr( (int) PBN_Settings::get( 'height_sm' ) ); ?>px;"
-			data-pbn-interval="<?php echo esc_attr( $interval ); ?>">
-			<div class="container hero-slider" id="heroSlider">
+			data-pbn-interval="<?php echo esc_attr( $interval ); ?>"
+			aria-roledescription="carousel"
+			aria-label="<?php esc_attr_e( 'بنرهای فروشگاه', 'parsian-banners' ); ?>">
+
+			<div class="pbn-viewport">
 				<?php foreach ( $banners as $index => $banner ) : ?>
 					<?php self::slide( $banner, 0 === $index ); ?>
 				<?php endforeach; ?>
-
-				<?php if ( count( $banners ) > 1 ) : ?>
-					<button class="hero-arrow hero-arrow-next" id="heroNext" aria-label="<?php esc_attr_e( 'بنر بعدی', 'parsian-banners' ); ?>">❮</button>
-					<button class="hero-arrow hero-arrow-prev" id="heroPrev" aria-label="<?php esc_attr_e( 'بنر قبلی', 'parsian-banners' ); ?>">❯</button>
-				<?php endif; ?>
-
-				<div class="hero-dots" id="heroDots"></div>
 			</div>
+
+			<?php if ( ! $single ) : ?>
+				<button type="button" class="pbn-nav pbn-prev" data-pbn-prev aria-label="<?php esc_attr_e( 'بنر قبلی', 'parsian-banners' ); ?>">
+					<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+				</button>
+				<button type="button" class="pbn-nav pbn-next" data-pbn-next aria-label="<?php esc_attr_e( 'بنر بعدی', 'parsian-banners' ); ?>">
+					<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+				</button>
+
+				<div class="pbn-dots" data-pbn-dots role="tablist">
+					<?php foreach ( $banners as $index => $banner ) : ?>
+						<button type="button" class="pbn-dot<?php echo 0 === $index ? ' is-active' : ''; ?>"
+							data-pbn-dot="<?php echo esc_attr( $index ); ?>" role="tab"
+							aria-label="<?php echo esc_attr( sprintf( /* translators: %s: شمارهٔ بنر. */ __( 'بنر %s', 'parsian-banners' ), pbn_digits( $index + 1 ) ) ); ?>"
+							aria-selected="<?php echo 0 === $index ? 'true' : 'false'; ?>"></button>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
 		</section>
 		<?php
 
@@ -213,24 +232,24 @@ class PBN_Render {
 	protected static function slide( $banner, $active ) {
 		$image    = $banner->get_image_url();
 		$mobile   = $banner->get_image_url( true );
-		$overlay  = $banner->get_overlay();
 		$features = $banner->get_features();
+		$dark     = 'light' === $banner->get_scheme();
 
-		$classes = array( 'hero-slide', 'pbn-slide', 'pbn-scheme-' . $banner->get_scheme() );
+		$classes = array( 'pbn-slide', $dark ? 'pbn-on-dark' : 'pbn-on-light' );
 
 		if ( $active ) {
 			$classes[] = 'is-active';
 		}
 
-		// نمایش وابسته به دستگاه با CSS انجام می‌شود، نه با تشخیص سمت سرور —
-		// چون صفحه ممکن است کش شده باشد و تشخیص سرور آن‌وقت اشتباه می‌شود.
+		// نمایش وابسته به دستگاه با CSS انجام می‌شود، نه سمت سرور — صفحهٔ
+		// کش‌شده وگرنه برای همه یک‌جور در می‌آید.
 		$device = $banner->get_device();
 
 		if ( 'all' !== $device ) {
 			$classes[] = 'pbn-only-' . $device;
 		}
 
-		$style = array( '--pbn-overlay:' . ( $overlay / 100 ) );
+		$style = array( '--pbn-overlay:' . ( $banner->get_overlay() / 100 ) );
 
 		if ( $image ) {
 			$style[] = "--pbn-image:url('" . esc_url( $image ) . "')";
@@ -240,37 +259,41 @@ class PBN_Render {
 			$style[] = "--pbn-image-sm:url('" . esc_url( $mobile ) . "')";
 		}
 		?>
-		<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>" style="<?php echo esc_attr( implode( ';', $style ) ); ?>">
+		<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>"
+			style="<?php echo esc_attr( implode( ';', $style ) ); ?>"
+			role="group" aria-roledescription="slide"
+			<?php echo $active ? '' : 'aria-hidden="true"'; ?>>
+
 			<?php if ( $image ) : ?>
-				<span class="pbn-slide-bg" aria-hidden="true"></span>
+				<span class="pbn-bg" aria-hidden="true"></span>
 			<?php endif; ?>
 
-			<div class="hero-content">
+			<div class="pbn-content">
 				<?php if ( $banner->get( 'eyebrow' ) ) : ?>
-					<span class="hero-eyebrow"><?php echo esc_html( $banner->get( 'eyebrow' ) ); ?></span>
+					<span class="pbn-eyebrow"><?php echo esc_html( $banner->get( 'eyebrow' ) ); ?></span>
 				<?php endif; ?>
 
-				<h2 class="hero-title">
+				<h2 class="pbn-title">
 					<?php
-					// فقط <em> و <br> برای تأکید مجازند؛ بقیه حذف می‌شود.
+					// فقط تأکید و شکستن خط مجاز است؛ بقیه حذف می‌شود.
 					echo wp_kses( $banner->get_title(), array( 'em' => array(), 'strong' => array(), 'br' => array() ) );
 					?>
 				</h2>
 
 				<?php if ( $banner->get( 'description' ) ) : ?>
-					<p class="hero-desc"><?php echo esc_html( $banner->get( 'description' ) ); ?></p>
+					<p class="pbn-desc"><?php echo esc_html( $banner->get( 'description' ) ); ?></p>
 				<?php endif; ?>
 
 				<?php if ( $banner->get( 'button_text' ) || $banner->get( 'button2_text' ) ) : ?>
-					<div class="hero-cta">
+					<div class="pbn-actions">
 						<?php if ( $banner->get( 'button_text' ) ) : ?>
-							<a class="btn btn-primary" href="<?php echo esc_url( $banner->get( 'button_url', '#' ) ); ?>">
+							<a class="btn btn-primary pbn-btn" href="<?php echo esc_url( $banner->get( 'button_url', '#' ) ); ?>">
 								<?php echo esc_html( $banner->get( 'button_text' ) ); ?>
 							</a>
 						<?php endif; ?>
 
 						<?php if ( $banner->get( 'button2_text' ) ) : ?>
-							<a class="btn btn-ghost" href="<?php echo esc_url( $banner->get( 'button2_url', '#' ) ); ?>">
+							<a class="btn <?php echo $dark ? 'btn-outline-light' : 'btn-secondary'; ?> pbn-btn" href="<?php echo esc_url( $banner->get( 'button2_url', '#' ) ); ?>">
 								<?php echo esc_html( $banner->get( 'button2_text' ) ); ?>
 							</a>
 						<?php endif; ?>
@@ -278,7 +301,7 @@ class PBN_Render {
 				<?php endif; ?>
 
 				<?php if ( $features ) : ?>
-					<ul class="hero-features">
+					<ul class="pbn-features">
 						<?php foreach ( $features as $feature ) : ?>
 							<li><?php echo esc_html( $feature ); ?></li>
 						<?php endforeach; ?>
